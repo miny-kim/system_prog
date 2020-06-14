@@ -4,6 +4,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 #include <asm/mach/map.h>
 #include <asm/io.h>
@@ -63,10 +64,10 @@
 struct write_data{
 	char* input;
 	int len;
-}
+};
 
 #define I2C_SET_SLAVE	_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
-#define LCD_INIT		_IO(LCD_MAGIC_NUMBER, 1)
+#define LCD_START		_IO(LCD_MAGIC_NUMBER, 1)
 #define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 2, struct write_data)
 #define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 3, int)
 #define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 4)
@@ -86,11 +87,11 @@ int lcd_release(struct inode *inode, struct file *filp){
 }
 
 int lcd_send_4bits(u_int8_t value){
-	i2c_write(value, 1);
-	i2c_write(value | En, 1);
-	usleep(1000);
-	i2c_write(value & ~En, 1);
-	usleep(50000);
+	i2c_write(value);
+	i2c_write(value | En);
+	msleep(1);
+	i2c_write(value & ~En);
+	msleep(50);
 	return 0;
 }
 
@@ -103,36 +104,36 @@ int lcd_send(u_int8_t value, u_int8_t mode){
 }
 
 int lcd_write(char *str, int len){
+	int i;
 	printk(KERN_INFO "LCD DD - Write\n");
-	char* c = str;
-	for(int i =0; i<len; i++){
-		lcd_send((u_int8_t)c[i], Rs);
+	for(i =0; i<len; i++){
+		lcd_send((u_int8_t)str[i], Rs);
 	}
 	return 0;
 }
 
 int lcd_set_line(int line){ //line = 0 : first line, line = 1 : second line
-	printk(KERN_INFO "LCD DD - Set line\n");
 	int offset[2] = {0x00,0x40};
+	printk(KERN_INFO "LCD DD - Set line\n");
 	lcd_send(LCD_SETDDRAMADDR | offset[line],0);
 	return 0;
 }
 
-int lcd_clear(){
+int lcd_clear(void){
 	printk(KERN_INFO"LCD DD - Clear\n");
 	lcd_write(LCD_CLEARDISPLAY,0); //clear display and autimatically set cursor to upper left
-	usleep(2000000);
+	msleep(2000);
 	return 0;
 }
 
-int lcd_init(){
+int lcd_start(void){
 	//change 8bit mode to 4 bit mode
 	lcd_send_4bits(0x03<<4);
-	usleep(4500000);
+	msleep(4500);
 	lcd_send_4bits(0x03<<4);
-	usleep(4500000);
+	msleep(4500);
 	lcd_send_4bits(0x03<<4);
-	usleep(150000);
+	msleep(150);
 	lcd_send_4bits(0x02<<4);
 
 	//initiate
@@ -152,16 +153,19 @@ long lcd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			slaveAddr = (u_int8_t)arg;
 			i2c_setSlave(slaveAddr);
 			break;
-		case LCD_INIT:
+		case LCD_START:
 			if(slaveAddr == -1){
 				printk(KERN_ALERT"LCD DD - Slave Not Set");
 				return -1;
 			}
-			lcd_init();
+			lcd_start();
 			break;
 		case LCD_WRITE:
-			char* str = (struct write_data) arg.input;
-			int len = (struct write_data) arg.len;
+			char* str;
+			int len;
+			struct write_data in = (struct write_data) arg;
+			str = (struct write_data) in.input;
+			len = (struct write_data) in.len;
 			lcd_write(str, len);
 			break;
 		case LCD_SET_LINE:

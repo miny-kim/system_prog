@@ -46,7 +46,6 @@ void i2c_open(){
 
     gpfsel0 = (volatile unsigned int *)(gpio_base + GPFSEL0);
     
-    //이상하게 bsc1 같은 거 할 때 /4를 했음 난 그 부분 뺄거임
     bsc1 = (volatile unsigned int *)(bsc1_base + BSC); //control
     bss1 = (volatile unsigned int *)(bsc1_base + BSS); //status
     bsdlen1 = (volatile unsigned int *)(bsc1_base + BSDLEN); //data length
@@ -69,7 +68,38 @@ void i2c_setSlave(u_int8_t addr){
     *bsa1 = (*bsa & 0x8F) | (addr & 0x8F); //set slave address
 }
 
-bool i2c_write(u_int8_t* buf, int len){
+int i2c_write(u_int8_t buf){
+    *bsc1 |= 0x30; //clear fifo
+    *bsc1 &= ~(0x1); //set to write packet transfer
+
+    *bss1 &= ~(0x302); // clear status
+
+    *bsdlen1 = (*bsdlen1 & 0xFFFF) | (0x0001); //set length
+
+    while(!(*bss1&(0x10)));//fill buffer before sending
+    *bsfifo1 = (*bsfifo1 & 0xFF) & buf[i];
+
+    *bsc1 |= 0x8080; //start transfer
+
+    if(*bss1 & 0x200){ //clock stretch timeout
+        printk(KERN_ALERT "I2C Write - Clock Stretch Timeout\n");
+        return -1;
+    }
+    else if (*bss1 & 0x100){ //ACK error
+        printk(KERN_ALERT "I2C Write - No Slave Acknowledged the Address\n");
+        return -1;
+    }
+    else if (i<len){//part of data wasn't sent
+        printk(KERN_ALERT "I2C Write - Part of Data Not Sent\n");
+        return -1;
+    }
+
+    *bss1 |= 0x2; //set done
+
+    return 0;
+}
+
+int i2c_write(u_int8_t* buf, int len){
     *bsc1 |= 0x30; //clear fifo
     *bsc1 &= ~(0x1); //set to write packet transfer
 
@@ -95,20 +125,20 @@ bool i2c_write(u_int8_t* buf, int len){
 
     if(*bss1 & 0x200){ //clock stretch timeout
         printk(KERN_ALERT "I2C Write - Clock Stretch Timeout\n");
-        return false;
+        return -1;
     }
     else if (*bss1 & 0x100){ //ACK error
         printk(KERN_ALERT "I2C Write - No Slave Acknowledged the Address\n");
-        return false;
+        return -1;
     }
     else if (i<len){//part of data wasn't sent
         printk(KERN_ALERT "I2C Write - Part of Data Not Sent\n");
-        return false;
+        return -1;
     }
 
     *bss1 |= 0x2; //set done
 
-    return true;
+    return 0;
 }
 
 bool i2c_read(u_int8_t* buf, int len){
