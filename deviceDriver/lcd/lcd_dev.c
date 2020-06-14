@@ -66,9 +66,10 @@ struct write_data{
 }
 
 #define I2C_SET_SLAVE	_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
-#define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 1, struct write_data)
-#define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 2, int)
-#define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
+#define LCD_INIT		_IO(LCD_MAGIC_NUMBER, 1)
+#define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 2, struct write_data)
+#define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 3, int)
+#define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 4)
 
 u_int8_t slaveAddr = -1;
 
@@ -159,8 +160,8 @@ long lcd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			lcd_init();
 			break;
 		case LCD_WRITE:
-			char* str = arg.input;
-			int len = arg.len;
+			char* str = (struct write_data) arg.input;
+			int len = (struct write_data) arg.len;
 			lcd_write(str, len);
 			break;
 		case LCD_SET_LINE:
