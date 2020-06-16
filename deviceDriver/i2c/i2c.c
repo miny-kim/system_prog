@@ -40,9 +40,11 @@ volatile unsigned int *bsdiv1;
 volatile unsigned int *bsdel1;
 volatile unsigned int *bsclkt1;
 
-void i2c_open(){
+
+
+void i2c_open(void){
     gpio_base = ioremap(GPIO_BASE_ADDR, 0x18);
-    bsc1_base = ioremap(BCS1_BASE_ADDR, 0x20);
+    bsc1_base = ioremap(BSC1_BASE_ADDR, 0x20);
 
     gpfsel0 = (volatile unsigned int *)(gpio_base + GPFSEL0);
     
@@ -56,7 +58,7 @@ void i2c_open(){
 	*gpfsel0 |= (0b100<<9); //SCL to alt
 }
 
-void i2c_release(){
+void i2c_release(void){
     *gpfsel0 &= ~(0b100<<6); //SDA to input
 	*gpfsel0 &= ~(0b100<<9); //SCL to input
 
@@ -65,22 +67,19 @@ void i2c_release(){
 }
 
 void i2c_setSlave(u_int8_t addr){
-    *bsa1 = (*bsa & 0x8F) | (addr & 0x8F); //set slave address
-}
-
-int i2c_write_one(u_int8_t buf){
-    return i2c_write(&buf, 1);
+    *bsa1 = addr & 0x7F; //set slave address
+	printk(KERN_INFO"I2C Slave - Slave Set to %X\n", *bsa1);
 }
 
 int i2c_write(u_int8_t* buf, int len){
-    *bsc1 |= 0x30; //clear fifo
+    int i = 0;
+	*bsc1 |= 0x30; //clear fifo
     *bsc1 &= ~(0x1); //set to write packet transfer
 
     *bss1 &= ~(0x302); // clear status
 
     *bsdlen1 = (*bsdlen1 & 0xFFFF) | (len & 0xFFFF); //set length
 
-    int i = 0;
     while(i<len && *bss1&(0x10)){ //fill buffer before sending
         *bsfifo1 = (*bsfifo1 & 0xFF) & buf[i];
         i++;
@@ -114,7 +113,12 @@ int i2c_write(u_int8_t* buf, int len){
     return 0;
 }
 
+int i2c_write_one(u_int8_t buf){
+    return i2c_write(&buf, 1);
+}
+
 bool i2c_read(u_int8_t* buf, int len){
+	int i =0;
     *bsc1 |= 0x30; //clear fifo
     *bsc1 |= 0x1; //set to read packet transfer
 

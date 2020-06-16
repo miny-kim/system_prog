@@ -9,7 +9,7 @@
 #include <sys/ioctl.h>
 #include <sys/sysmacros.h>
 
-#define LCD_MAJOR_NUMBER 502
+#define LCD_MAJOR_NUMBER 503
 #define LCD_MINOR_NUMBER 100
 #define LCD_DEV_PATH_NAME "/dev/lcd_dev"
 #define LCD_MAGIC_NUMBER 'j'
@@ -23,7 +23,7 @@
 struct write_data{
 	char* input;
 	int len;
-}
+};
 
 int main(void){
 	dev_t lcd_dev;
@@ -49,8 +49,8 @@ int main(void){
 	ioctl(lcd_fd, I2C_SET_SLAVE, &slaveAddr);
 	ioctl(lcd_fd, LCD_INIT);
 	ioctl(lcd_fd, LCD_WRITE, &test);
-
-	usleep(10000000); //10 sec
+	printf("does it work?\n");
+	usleep(5000000); //5 sec
 	
 	close(lcd_fd);
 	

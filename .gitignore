@@ -7,4 +7,4 @@
 *.o
 *.mod.c
 *.mod.o
-*.Modules.symvers
+*.Module.symvers
