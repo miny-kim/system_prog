@@ -87,10 +87,10 @@ int lcd_release(struct inode *inode, struct file *filp){
 }
 
 int lcd_send_4bits(u_int8_t value){
-	i2c_write(value);
-	i2c_write(value | En);
+	i2c_write_one(value);
+	i2c_write_one(value | En);
 	msleep(1);
-	i2c_write(value & ~En);
+	i2c_write_one(value & ~En);
 	msleep(50);
 	return 0;
 }
@@ -150,7 +150,7 @@ int lcd_start(void){
 long lcd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	char* str;
 	int len;
-	struct write_data in;
+	struct write_data* in;
 	
 	switch(cmd){
 		case I2C_SET_SLAVE:
@@ -165,9 +165,9 @@ long lcd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			lcd_start();
 			break;
 		case LCD_WRITE:
-			in = (struct write_data) arg;
-			str = in.input;
-			len = in.len;
+			in = (struct write_data *)arg;
+			str = in->input;
+			len = in->len;
 			lcd_write(str, len);
 			break;
 		case LCD_SET_LINE:
