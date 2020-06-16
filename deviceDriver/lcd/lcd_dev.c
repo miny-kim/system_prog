@@ -121,7 +121,7 @@ int lcd_set_line(int line){ //line = 0 : first line, line = 1 : second line
 
 int lcd_clear(void){
 	printk(KERN_INFO"LCD DD - Clear\n");
-	lcd_write(LCD_CLEARDISPLAY,0); //clear display and autimatically set cursor to upper left
+	lcd_send(LCD_CLEARDISPLAY,0); //clear display and autimatically set cursor to upper left
 	msleep(2000);
 	return 0;
 }
@@ -148,6 +148,10 @@ int lcd_start(void){
 
 
 long lcd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
+	char* str;
+	int len;
+	struct write_data in;
+	
 	switch(cmd){
 		case I2C_SET_SLAVE:
 			slaveAddr = (u_int8_t)arg;
@@ -161,11 +165,9 @@ long lcd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			lcd_start();
 			break;
 		case LCD_WRITE:
-			char* str;
-			int len;
-			struct write_data in = (struct write_data) arg;
-			str = (struct write_data) in.input;
-			len = (struct write_data) in.len;
+			in = (struct write_data) arg;
+			str = in.input;
+			len = in.len;
 			lcd_write(str, len);
 			break;
 		case LCD_SET_LINE:
