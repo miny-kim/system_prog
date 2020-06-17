@@ -14,11 +14,10 @@
 #define LCD_DEV_PATH_NAME "/dev/lcd_dev"
 #define LCD_MAGIC_NUMBER 'j'
 
-#define I2C_SET_SLAVE	_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
-#define LCD_INIT		_IO(LCD_MAGIC_NUMBER, 1)
-#define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 2, struct write_data)
-#define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 3, int)
-#define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 4)
+#define LCD_START		_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
+#define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 1, struct write_data)
+#define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 2, int)
+#define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
 struct write_data{
 	char* input;
@@ -39,6 +38,8 @@ int main(void){
 		printf("fail to open lcd_dev\n");
 		return -1;
 	}
+
+	printf("opened LCD\n");
 	
 	//currently testing
 
@@ -46,11 +47,12 @@ int main(void){
 	u_int8_t slaveAddr = 0x27;
 	test.input = "Hello World!";
 	test.len = strlen(test.input);
-	ioctl(lcd_fd, I2C_SET_SLAVE, &slaveAddr);
-	ioctl(lcd_fd, LCD_INIT);
+	ioctl(lcd_fd, LCD_START, &slaveAddr);
+	printf("set slave address\n");
 	ioctl(lcd_fd, LCD_WRITE, &test);
 	printf("does it work?\n");
 	usleep(5000000); //5 sec
+	ioctl(lcd_fd, LCD_CLEAR);
 	
 	close(lcd_fd);
 	

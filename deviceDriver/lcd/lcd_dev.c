@@ -1,4 +1,4 @@
-/*#include <linux/init.h>
+#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
@@ -73,15 +73,17 @@ void i2c_setSlave(u_int8_t addr){
 
 int i2c_write(u_int8_t* buf, int len){
     int i = 0;
+	int maxBuf = 16;
+	printk(KERN_INFO"I2C Write - writing data %d len\n", len);
 	*bsc1 |= 0x30; //clear fifo
     *bsc1 &= ~(0x1); //set to write packet transfer
 
     *bss1 &= ~(0x302); // clear status
 
-    *bsdlen1 = (*bsdlen1 & 0xFFFF) | (len & 0xFFFF); //set length
+    *bsdlen1 = (*bsdlen1 & (~0xFFFF)) | (len & 0xFFFF); //set length
 
-    while(i<len && *bss1&(0x10)){ //fill buffer before sending
-        *bsfifo1 = (*bsfifo1 & 0xFF) & buf[i];
+    while(i<len && i < maxBuf){ //fill buffer before sending
+        *bsfifo1 = buf[i];
         i++;
     }
 
@@ -90,7 +92,7 @@ int i2c_write(u_int8_t* buf, int len){
 
     while(!(*bss1 & 0x2)){//while not done
         while(i<len && *bss1&(0x10)){ //fill the rest into buffer
-            *bsfifo1 = (*bsfifo1 & 0xFF) & buf[i];
+            *bsfifo1 = buf[i];
             i++;
         }
     }
@@ -124,19 +126,19 @@ bool i2c_read(u_int8_t* buf, int len){
 
     *bss1 &= ~(0x302); // clear status
 
-    *bsdlen1 = (*bsdlen1 & 0xFFFF) | (len & 0xFFFF); //set length
+    *bsdlen1 = (*bsdlen1 & (~0xFFFF)) | (len & 0xFFFF); //set length
 
     *bsc1 |= 0x8081; //start transfer
 
     while(!(*bss1 & 0x2)){//while not done
         while(i<len && *bss1&(0x20)){ //empty the buffer
-            buf[i] = *bsfifo1 | 0xFF;
+            buf[i] = *bsfifo1 & 0xFF;
             i++;
         }
     }
 
     while(i<len && *bss1&(0x20)){ //empty rest of the buffer
-        buf[i] = *bsfifo1 | 0xFF;
+        buf[i] = *bsfifo1 & 0xFF;
         i++;
     }
 
@@ -157,7 +159,7 @@ bool i2c_read(u_int8_t* buf, int len){
 
     return true;
 }
-*/
+
 
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -227,11 +229,10 @@ struct write_data{
 	int len;
 };
 
-#define I2C_SET_SLAVE	_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
-#define LCD_START		_IO(LCD_MAGIC_NUMBER, 1)
-#define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 2, struct write_data)
-#define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 3, int)
-#define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 4)
+#define LCD_START		_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
+#define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 1, struct write_data)
+#define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 2, int)
+#define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
 u_int8_t* slaveAddr = NULL;
 
@@ -289,6 +290,7 @@ int lcd_clear(void){
 
 int lcd_start(void){
 	//change 8bit mode to 4 bit mode
+	printk(KERN_INFO"LCD DD - Start\n");
 	lcd_send_4bits(0x03<<4);
 	msleep(4500);
 	lcd_send_4bits(0x03<<4);
@@ -298,7 +300,7 @@ int lcd_start(void){
 	lcd_send_4bits(0x02<<4);
 
 	//initiate
-	lcd_send(LCD_FUNCTIONSET | LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS,0);
+	lcd_send(LCD_FUNCTIONSET | LCD_4BITMODE | LCD_2LINE | LCD_5x8DOTS,0);
 	lcd_send(LCD_DISPLAYCONTROL | LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF,0);
 	lcd_send(LCD_ENTRYMODESET | LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT,0);
 
@@ -314,21 +316,16 @@ long lcd_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	struct write_data* in;
 	
 	switch(cmd){
-		case I2C_SET_SLAVE:
+		case LCD_START:
 			slaveAddr = (u_int8_t*) arg;
 			i2c_setSlave(*slaveAddr);
-			break;
-		case LCD_START:
-			if(slaveAddr == NULL){
-				printk(KERN_ALERT"LCD DD - Slave Not Set");
-				return -1;
-			}
 			lcd_start();
 			break;
 		case LCD_WRITE:
 			in = (struct write_data *)arg;
 			str = in->input;
 			len = in->len;
+			printk(KERN_INFO"LCD_WRITE : Writing %s, len %d\n",str,len);
 			lcd_write(str, len);
 			break;
 		case LCD_SET_LINE:
