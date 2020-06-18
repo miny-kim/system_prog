@@ -217,9 +217,8 @@ unsigned short crc16(unsigned char *ptr, unsigned char len) {//copied from AM232
 } 
 
 int tnh_read_humidity(int* humidity){
-    int humid;
     u_int8_t msg[3];
-    u_int8_t* buf;
+    u_int8_t buf[6];
     msg[0] = TNH_READ;
     msg[1] = TNH_HUMID;
     msg[2] = 0x02;
@@ -239,7 +238,7 @@ int tnh_read_humidity(int* humidity){
         return -1;
     }
 
-    if((u_int16_t)buf[5]<<8 | buf[4] != crc16(buffer, 4)){
+    if(((u_int16_t)buf[5]<<8 | buf[4]) != crc16(buf, 4)){
         printk(KERN_ALERT "TNH Read Humidity - Checksum Error\n");
         return -1;
     }
