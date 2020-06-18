@@ -9,7 +9,7 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
-#include "i2c.h"
+//#include "i2c.h"
 
 #define GPIO_BASE_ADDR  0x3F200000
 #define BSC1_BASE_ADDR  0x3F804000
@@ -159,3 +159,139 @@ bool i2c_read(u_int8_t* buf, int len){
 
     return true;
 }
+
+
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
+#include <linux/delay.h>
+
+#include <asm/mach/map.h>
+#include <asm/io.h>
+#include <asm/uaccess.h>
+
+//#include "../i2c/i2c.h"
+
+#define TNH_MAJOR_NUMBER	504
+#define TNH_DEV_NAME		"tnh_dev"
+#define TNH_MAGIC_NUMBER	'j'
+
+#define TNH_READ        0x03
+#define TNH_HUMID       0x00
+
+#define TNH_START		    _IOW(TNH_MAGIC_NUMBER, 0 , u_int8_t)
+#define TNH_READ_HUMIDITY   _IOR(TNH_MAGIC_NUMBER, 1, int*)
+
+u_int8_t* slaveAddr = NULL;
+
+int tnh_open(struct inode *inode, struct file *filp){
+	printk(KERN_ALERT "TNH DD -  Open\n");
+	i2c_open();
+	return 0;
+}
+
+int tnh_release(struct inode *inode, struct file *filp){
+	printk(KERN_ALERT "TNH DD -  Release\n");
+	i2c_release();
+	return 0;
+}
+
+unsigned short crc16(unsigned char *ptr, unsigned char len) {//copied from AM2320-Aosong Datasheet
+    unsigned short crc =0xFFFF;
+    unsigned char i;
+    while(len--){
+        crc ^=*ptr++;
+        for(i=0;i<8;i++){
+            if(crc & 0x01){
+                crc>>=1;
+                crc^=0xA001;
+            }else{
+                crc>>=1;
+            }
+        }
+    }
+    return crc;
+} 
+
+int tnh_read_humidity(int* humidity){
+    int humid;
+    u_int8_t msg[3];
+    u_int8_t* buf;
+    msg[0] = TNH_READ;
+    msg[1] = TNH_HUMID;
+    msg[2] = 0x02;
+    i2c_write_one(0x00); //wake up
+    msleep(10);
+    i2c_write(msg, 3);
+    msleep(2);
+
+    i2c_read(buf, 6);
+
+    if(buf[0] != 0x03){ //wrong function code
+        printk(KERN_ALERT "TNH Read Humidity - Wrong Function Code\n");
+        return -1;
+    }
+    if(buf[1] != 0x02){//length of data isn't two bytes
+        printk(KERN_ALERT "TNH Read Humidity - Wrong Data Length\n");
+        return -1;
+    }
+
+    if((u_int16_t)buf[5]<<8 | buf[4] != crc16(buffer, 4)){
+        printk(KERN_ALERT "TNH Read Humidity - Checksum Error\n");
+        return -1;
+    }
+
+    *humidity = (buf[2]<<8) | buf[3];
+    return 0;
+}
+
+long tnh_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
+	int* humidity;
+    switch(cmd){
+		case TNH_START:
+            slaveAddr = (u_int8_t*) arg;
+			i2c_setSlave(*slaveAddr);
+            break;
+        case TNH_READ_HUMIDITY:
+            if(tnh_read_humidity(humidity)<0){
+                printk(KERN_ALERT "TNH DD - Read Error\n");
+			    return -1;
+            }
+            copy_to_user((void*)arg, humidity, 4);
+            break;
+        default:
+			printk(KERN_ALERT "TNH DD - Unknown Command\n");
+			return -1;
+	}
+	return 0;
+}
+
+static struct file_operations tnh_fops = {
+	.owner = THIS_MODULE,
+	.unlocked_ioctl = tnh_ioctl,
+	.open = tnh_open,
+	.release = tnh_release
+};
+
+int __init tnh_init(void){
+	if(register_chrdev(TNH_MAJOR_NUMBER, TNH_DEV_NAME, &tnh_fops)<0)
+		printk(KERN_ALERT "TNH DD - Initialization Fail\n");
+	else
+		printk(KERN_ALERT "TNH DD - Initialization Success\n");
+	return 0;
+}
+
+void __exit tnh_exit(void){
+	unregister_chrdev(TNH_MAJOR_NUMBER, TNH_DEV_NAME);
+	printk(KERN_ALERT "TNH DD -  Exit\n");
+}
+
+module_init(tnh_init);
+module_exit(tnh_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("JeongMin Choi");
+MODULE_DESCRIPTION("Device Driver for Temperature and Humidity Sensor");

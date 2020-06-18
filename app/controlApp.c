@@ -9,10 +9,17 @@
 #include <sys/ioctl.h>
 #include <sys/sysmacros.h>
 
-#define LCD_MAJOR_NUMBER 503
-#define LCD_MINOR_NUMBER 100
-#define LCD_DEV_PATH_NAME "/dev/lcd_dev"
-#define LCD_MAGIC_NUMBER 'j'
+#define LCD_MAJOR_NUMBER	503
+#define LCD_MINOR_NUMBER	100
+#define LCD_DEV_PATH_NAME	"/dev/lcd_dev"
+#define LCD_MAGIC_NUMBER	'j'
+#define LCD_SLAVEADDR		0x27
+
+#define TNH_MAJOR_NUMBER	504
+#define TNH_MINOR_NUMBER	100
+#define TNH_DEV_PATH_NAME	"/dev/tnh_dev"
+#define TNH_MAGIC_NUMBER	'j'
+#define TNH_SLAVEADDR		0xB8
 
 #define LCD_START		_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
 #define LCD_WRITE		_IOW(LCD_MAGIC_NUMBER, 1, struct write_data)
@@ -44,10 +51,10 @@ int main(void){
 	//currently testing
 
 	struct write_data test;
-	u_int8_t slaveAddr = 0x27;
+	u_int8_t lcdSlaveAddr = LCD_SLAVEADDR;
 	test.input = "Hello World!";
 	test.len = strlen(test.input);
-	ioctl(lcd_fd, LCD_START, &slaveAddr);
+	ioctl(lcd_fd, LCD_START, &lcdSlaveAddr);
 	printf("set slave address\n");
 	ioctl(lcd_fd, LCD_WRITE, &test);
 	printf("does it work?\n");
