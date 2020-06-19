@@ -79,14 +79,18 @@ void Setup_MINIUART(void)
    *gpfsel1 |= (2 << 12); //change function 
    *gpfsel1 |= (2 << 15);
    *mucntl = 3;
+   
+   printk(KERN_INFO "CLEAR? %d",(*mulsr&(1<<6)));
 
 }
 
 void Send_MINIUART(unsigned int data){
-   while (!(*mulsr & (1 << 5))); // mulsr이 1이 될때까지 기다리기
+   while (!(*mulsr & (1 << 5)));
+   printk(KERN_ALERT "data send %c\n", data);
    *muio = data;
-   printk(KERN_ALERT "UART buffer send %d\n", (*muio));
+   //printk(KERN_ALERT "UART buffer send %d\n", (*muio));
 }
+
 int Receive_MINIUART(void)
 {
    int temp;
@@ -94,9 +98,8 @@ int Receive_MINIUART(void)
    {
       return -1;
    }
-
    temp = (*muio);
-   printk(KERN_ALERT "UART buffer receive %d\n", temp);
+   printk(KERN_ALERT "UART buffer receive %c\n", temp);
    return temp;
 }
 
@@ -106,7 +109,7 @@ long uart_ioctl(struct file *flip, unsigned int cmd, unsigned long arg)
    
    switch(cmd) {         
       case IOCTL_CMD_TRANSMIT:
-         copy_from_user(&kbuf, (const void*)arg, 4);
+         copy_from_user(&kbuf, (const void*)arg, sizeof(char));
          Send_MINIUART(kbuf);
          break;
          
