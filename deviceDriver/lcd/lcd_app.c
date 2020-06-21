@@ -11,7 +11,7 @@
 
 #define LCD_MAJOR_NUMBER 503
 #define LCD_MINOR_NUMBER 100
-#define LCD_DEV_PATH_NAME "/dev/lcd_dev"
+#define LCD_DEV_PATH_NAME "lcd_dev"
 #define LCD_MAGIC_NUMBER 'j'
 
 #define LCD_START		_IOW(LCD_MAGIC_NUMBER, 0 , u_int8_t)
