@@ -293,4 +293,5 @@ module_exit(tnh_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("JeongMin Choi");
+
 MODULE_DESCRIPTION("Device Driver for Temperature and Humidity Sensor");
