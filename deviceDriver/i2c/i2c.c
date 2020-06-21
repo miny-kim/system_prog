@@ -73,15 +73,17 @@ void i2c_setSlave(u_int8_t addr){
 
 int i2c_write(u_int8_t* buf, int len){
     int i = 0;
+	int maxBuf = 16;
+	printk(KERN_INFO"I2C Write - writing data %d len\n", len);
 	*bsc1 |= 0x30; //clear fifo
     *bsc1 &= ~(0x1); //set to write packet transfer
 
     *bss1 &= ~(0x302); // clear status
 
-    *bsdlen1 = (*bsdlen1 & 0xFFFF) | (len & 0xFFFF); //set length
+    *bsdlen1 = (*bsdlen1 & (~0xFFFF)) | (len & 0xFFFF); //set length
 
-    while(i<len && *bss1&(0x10)){ //fill buffer before sending
-        *bsfifo1 = (*bsfifo1 & 0xFF) & buf[i];
+    while(i<len && i < maxBuf){ //fill buffer before sending
+        *bsfifo1 = buf[i];
         i++;
     }
 
@@ -90,7 +92,7 @@ int i2c_write(u_int8_t* buf, int len){
 
     while(!(*bss1 & 0x2)){//while not done
         while(i<len && *bss1&(0x10)){ //fill the rest into buffer
-            *bsfifo1 = (*bsfifo1 & 0xFF) & buf[i];
+            *bsfifo1 = buf[i];
             i++;
         }
     }
@@ -124,19 +126,19 @@ bool i2c_read(u_int8_t* buf, int len){
 
     *bss1 &= ~(0x302); // clear status
 
-    *bsdlen1 = (*bsdlen1 & 0xFFFF) | (len & 0xFFFF); //set length
+    *bsdlen1 = (*bsdlen1 & (~0xFFFF)) | (len & 0xFFFF); //set length
 
     *bsc1 |= 0x8081; //start transfer
 
     while(!(*bss1 & 0x2)){//while not done
         while(i<len && *bss1&(0x20)){ //empty the buffer
-            buf[i] = *bsfifo1 | 0xFF;
+            buf[i] = *bsfifo1 & 0xFF;
             i++;
         }
     }
 
     while(i<len && *bss1&(0x20)){ //empty rest of the buffer
-        buf[i] = *bsfifo1 | 0xFF;
+        buf[i] = *bsfifo1 & 0xFF;
         i++;
     }
 
