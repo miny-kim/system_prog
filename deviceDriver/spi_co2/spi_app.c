@@ -39,7 +39,7 @@ int main()
         read(fd, &ppm, sizeof(int));
         
         temp = ppm * 3.3 / 4095.0;
-        
+       
         if(temp <1)
             temp = 1;
         
