@@ -43,9 +43,6 @@ int led_open(struct inode *inode, struct file *filp){
 	gpset0 = (volatile unsigned int *)(gpio_base + GPSET0);
 	gpclr0 = (volatile unsigned int *)(gpio_base + GPCLR0);
 	
-	*gpsel1 |= (1<<18); //gpio 16 = R
-    *gpsel1 |= (1<<21); //gpio 17 = G
-	*gpsel1 |= (1<<24); //gpio 18 = B
 	return 0;
 }
 
@@ -140,5 +137,5 @@ module_init(led_init);
 module_exit(led_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("JeongMin Choi");
-MODULE_DESCRIPTION("des");
+MODULE_AUTHOR("Minyeong");
+MODULE_DESCRIPTION("Device Driver for RGB LED");

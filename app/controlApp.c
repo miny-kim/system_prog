@@ -20,31 +20,39 @@
 #define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 2, int)
 #define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
-#define BUTTON_MAJOR_NUMBER 504
-#define BUTTON_DEV_PATH_NAME "/dev/button_dev"
-#define BUTTON_MAGIC_NUMBER 'j'
+#define BUTTON_MAJOR_NUMBER		504
+#define BUTTON_DEV_PATH_NAME	"/dev/button_dev"
+#define BUTTON_MAGIC_NUMBER		'j'
 
 #define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
 #define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
 
-#define UART_MAJOR_NUMBER 502
-#define UART_MINOR_NUMBER 100
-#define UART_DEV_PATH_NAME "/dev/uart_ioctl"
-#define IOCTL_MAGIC_NUMBER 'u'
+#define UART_MAJOR_NUMBER	502
+#define UART_MINOR_NUMBER	100
+#define UART_DEV_PATH_NAME	"/dev/uart_ioctl"
+#define IOCTL_MAGIC_NUMBER	'u'
 
-#define STRING_LENGTH 128
-#define LCD_LENGTH 16
+#define STRING_LENGTH	128
+#define LCD_LENGTH		16
 
-#define IOCTL_CMD_TRANSMIT _IOWR(IOCTL_MAGIC_NUMBER, 0, int)
-#define IOCTL_CMD_RECEIVE _IOWR(IOCTL_MAGIC_NUMBER, 1, int)
-#define IOCTL_CMD_ARRIVED _IOR(IOCTL_MAGIC_NUMBER, 2, int)
+#define IOCTL_CMD_TRANSMIT	_IOWR(IOCTL_MAGIC_NUMBER, 0, int)
+#define IOCTL_CMD_RECEIVE	_IOWR(IOCTL_MAGIC_NUMBER, 1, int)
+#define IOCTL_CMD_ARRIVED	_IOR(IOCTL_MAGIC_NUMBER, 2, int)
 
-#define LED_MAJOR_NUMBER 505
-#define LED_DEV_NAME "led_dev"
-#define LED_MAGIC_NUMBER 'j'
+#define LED_MAJOR_NUMBER	505
+#define LED_DEV_NAME		"/dev/led_dev"
+#define LED_MAGIC_NUMBER	'j'
 
-#define LED_START _IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
-#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 1, int)
+#define LED_START	_IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
+#define LED_CONTROL	_IOW(LED_MAGIC_NUMBER, 1, int)
+
+#define CO2_GREAT	300
+#define CO2_GOOD	400
+#define CO2_BAD		500
+
+#define AIR_GREAT	400
+#define AIR_GOOD	500
+#define AIR_BAD		700
 
 struct write_data{
 	char* input;
@@ -54,14 +62,22 @@ struct write_data{
 int main(void){
 	dev_t uart_dev;
    	int uart_fd;
+
+	dev_t lcd_dev;
+	int lcd_fd;
+	
    	long temp;
    	char in[STRING_LENGTH];
 	char co2_str[LCD_LENGTH];
 	char dust_str[LCD_LENGTH];
-	char test_input[STRING_LENGTH]= "C12D34E";
+	char test_input[STRING_LENGTH]= "C12D34E";//for test delete later
 	int i = 0;
 	char result;
 	int state = -1;
+	struct write_data lcd_str;
+	u_int8_t slaveAddr = 0x27;
+	int setLine = 1;
+	
 
    
    	uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
@@ -70,11 +86,21 @@ int main(void){
 	}
    
    	uart_fd = open(UART_DEV_PATH_NAME, O_RDWR | O_NOCTTY | O_NDELAY); //Open in non blocking read/write mode
-   
    	if(uart_fd <0){
       	printf("fail to open\n");
     	return -1;
    	}
+
+	lcd_dev = makedev(LCD_MAJOR_NUMBER, LCD_MINOR_NUMBER);
+	if (mknod(LCD_DEV_PATH_NAME, S_IFCHR|0666, lcd_dev)<0){
+		fprintf(stderr, "%d\n", errno);
+	}
+	
+	lcd_fd = open(LCD_DEV_PATH_NAME, O_RDWR);
+	if(lcd_fd < 0){
+		printf("fail to open lcd_dev\n");
+		return -1;
+	}
 
 	//test
    	for(i = 0 ; i < strlen(test_input); i++){
@@ -94,6 +120,16 @@ int main(void){
 				state = 1; 
 			}else if(temp == 'E'){ //end of message
 				state = -1;
+				ioctl(lcd_fd, LCD_START, &slaveAddr);
+				ioctl(lcd_fd, LCD_CLEAR);
+				sprintf(lcd_str.input, "CO2: %s", co2_str);
+				lcd_str.len = strlen(lcd_str.input);
+				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
+				ioctl(lcd_fd, LCD_SET_LINE, &setLine);
+				sprintf(lcd_str.input, "Dust: %s", dust_str);
+				lcd_str.len = strlen(lcd_str.input);
+				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
+
 				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 				break;
 			}else{
@@ -110,8 +146,8 @@ int main(void){
 	}
    
    close(uart_fd);
+   close(lcd_fd);
    return 0;
-	// see if data arrives from uart
 	// print data in l
 	// calculate whether to open or close the window
 	// send data with uart 
