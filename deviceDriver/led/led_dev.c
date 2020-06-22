@@ -43,9 +43,6 @@ int led_open(struct inode *inode, struct file *filp){
 	gpset0 = (volatile unsigned int *)(gpio_base + GPSET0);
 	gpclr0 = (volatile unsigned int *)(gpio_base + GPCLR0);
 	
-	*gpsel1 |= (1<<18); //gpio 16 = R
-    *gpsel1 |= (1<<21); //gpio 17 = G
-	*gpsel1 |= (1<<24); //gpio 18 = B
 	return 0;
 }
 
@@ -63,7 +60,7 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	int kbuf = -1;
 	int i;
     switch(cmd){
-		case LED_START:
+		case LED_START: 
 			copy_from_user(&gpio_color, (const void*)arg, sizeof(gpio_color));
 			for(i=0; i<3; i++){
 				switch(gpio_color[i]/10){ //set gpio_color to output
@@ -77,7 +74,7 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 					*gpsel2 |= (1<<(((gpio_color[i])%10)*3));
 					break;
 				default:
-					printk(KERN_ALERT"BUTTON - Invalid GPIO Port Number\n");
+					printk(KERN_ALERT"LED - Invalid GPIO Port Number\n");
 				}
 			}
 			break;
@@ -140,5 +137,5 @@ module_init(led_init);
 module_exit(led_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("JeongMin Choi");
-MODULE_DESCRIPTION("des");
+MODULE_AUTHOR("Minyeong");
+MODULE_DESCRIPTION("Device Driver for RGB LED");
