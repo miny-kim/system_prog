@@ -60,7 +60,7 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	int kbuf = -1;
 	int i;
     switch(cmd){
-		case LED_START:
+		case LED_START: 
 			copy_from_user(&gpio_color, (const void*)arg, sizeof(gpio_color));
 			for(i=0; i<3; i++){
 				switch(gpio_color[i]/10){ //set gpio_color to output
@@ -74,7 +74,7 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 					*gpsel2 |= (1<<(((gpio_color[i])%10)*3));
 					break;
 				default:
-					printk(KERN_ALERT"BUTTON - Invalid GPIO Port Number\n");
+					printk(KERN_ALERT"LED - Invalid GPIO Port Number\n");
 				}
 			}
 			break;

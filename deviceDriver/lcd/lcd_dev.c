@@ -74,7 +74,7 @@ void i2c_setSlave(u_int8_t addr){
 int i2c_write(u_int8_t* buf, int len){
     int i = 0;
 	int maxBuf = 16;
-	printk(KERN_INFO"I2C Write - writing data %d len\n", len);
+	//printk(KERN_INFO"I2C Write - writing data %d len\n", len);
 	*bsc1 |= 0x30; //clear fifo
     *bsc1 &= ~(0x1); //set to write packet transfer
 
@@ -276,7 +276,7 @@ int lcd_write(char *str, int len){
 
 int lcd_set_line(int line){ //line = 0 : first line, line = 1 : second line
 	int offset[2] = {0x00,0x40};
-	printk(KERN_INFO "LCD DD - Set line\n");
+	printk(KERN_INFO "LCD DD - Set line %d\n", line);
 	lcd_send(LCD_SETDDRAMADDR | offset[line],0);
 	return 0;
 }

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -39,9 +40,11 @@
 #define IOCTL_CMD_RECEIVE	_IOWR(IOCTL_MAGIC_NUMBER, 1, int)
 #define IOCTL_CMD_ARRIVED	_IOR(IOCTL_MAGIC_NUMBER, 2, int)
 
-#define LED_MAJOR_NUMBER	505
-#define LED_DEV_NAME		"/dev/led_dev"
-#define LED_MAGIC_NUMBER	'j'
+#define LED_MAJOR_NUMBER		505
+#define LED_DEV_PATH_NAME		"/dev/led_dev"
+#define LED_MAGIC_NUMBER		'j'
+#define LED_CO2_MINOR_NUMBER	100
+#define LED_DUST_MINOR_NUMBER	101
 
 #define LED_START	_IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
 #define LED_CONTROL	_IOW(LED_MAGIC_NUMBER, 1, int)
@@ -59,27 +62,50 @@ struct write_data{
 	int len;
 };
 
+int getCO2State(int co2_value){
+	if(CO2_BAD < co2_value) return 1;
+	if(CO2_GOOD < co2_value) return 2;
+	return 3; 
+}
+
+int getDustState(int dust_value){
+	if(AIR_BAD < dust_value) return 1;
+	if(AIR_GOOD < dust_value) return 2;
+	return 3; 
+}
+
 int main(void){
 	dev_t uart_dev;
    	int uart_fd;
 
 	dev_t lcd_dev;
 	int lcd_fd;
+
+	dev_t co2_led_dev;
+	int co2_led_fd;
 	
+	dev_t dust_led_dev;
+	int dust_led_fd;
+
+	u_int8_t slaveAddr = 0x27;
+	unsigned int co2_gpio[3] = {17,27,22};
+	unsigned int dust_gpio[3] = {16,20,21};
+
    	long temp;
-   	char in[STRING_LENGTH];
-	char co2_str[LCD_LENGTH];
-	char dust_str[LCD_LENGTH];
 	char test_input[STRING_LENGTH]= "C12D34E";//for test delete later
 	int i = 0;
 	char result;
 	int state = -1;
 	struct write_data lcd_str;
-	u_int8_t slaveAddr = 0x27;
-	int setLine = 1;
-	
+	unsigned int setLine = 1;
 
-   
+	char co2_str[LCD_LENGTH];
+	char dust_str[LCD_LENGTH];
+	int co2_value;
+	int dust_value;
+	int co2_state;
+	int dust_state;
+	
    	uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
    	if(mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev)<0){
 		fprintf(stderr, "%d\n",errno);
@@ -96,11 +122,38 @@ int main(void){
 		fprintf(stderr, "%d\n", errno);
 	}
 	
-	lcd_fd = open(LCD_DEV_PATH_NAME, O_RDWR);
+	/*lcd_fd = open(LCD_DEV_PATH_NAME, O_RDWR);
 	if(lcd_fd < 0){
 		printf("fail to open lcd_dev\n");
 		return -1;
 	}
+
+	co2_led_dev = makedev(LED_MAJOR_NUMBER, LED_CO2_MINOR_NUMBER);
+	if (mknod(LED_DEV_PATH_NAME, S_IFCHR|0666, co2_led_dev)<0){
+		fprintf(stderr, "%d\n", errno);
+	}
+	
+	co2_led_fd = open(LED_DEV_PATH_NAME, O_RDWR);
+	if(co2_led_fd < 0){
+		printf("fail to open led_dev\n");
+		return -1;
+	}
+
+	dust_led_dev = makedev(LED_MAJOR_NUMBER, LED_DUST_MINOR_NUMBER);
+	if (mknod(LED_DEV_PATH_NAME, S_IFCHR|0666, dust_led_dev)<0){
+		fprintf(stderr, "%d\n", errno);
+	}
+	
+	dust_led_fd = open(LED_DEV_PATH_NAME, O_RDWR);
+	if(dust_led_fd < 0){
+		printf("fail to open led_dev\n");
+		return -1;
+	}*/
+
+	ioctl(lcd_fd, LCD_START, &slaveAddr);
+	//ioctl(co2_led_fd, LED_START, &co2_gpio);
+	//ioctl(dust_led_fd, LED_START, &dust_gpio);
+
 
 	//test
    	for(i = 0 ; i < strlen(test_input); i++){
@@ -108,7 +161,6 @@ int main(void){
     	usleep(100);
     }
 	//test end
-
    	while(1){
 		temp = ioctl(uart_fd, IOCTL_CMD_RECEIVE, NULL);
       	if(temp >= 0){
@@ -120,15 +172,27 @@ int main(void){
 				state = 1; 
 			}else if(temp == 'E'){ //end of message
 				state = -1;
-				ioctl(lcd_fd, LCD_START, &slaveAddr);
+				//문제점: next line이 잘 안되고 dust 뒤에 쓰레기 값이 들어감
 				ioctl(lcd_fd, LCD_CLEAR);
 				sprintf(lcd_str.input, "CO2: %s", co2_str);
 				lcd_str.len = strlen(lcd_str.input);
 				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
+				usleep(1000000);
 				ioctl(lcd_fd, LCD_SET_LINE, &setLine);
+				usleep(1000000);
 				sprintf(lcd_str.input, "Dust: %s", dust_str);
+				printf("%s", lcd_str.input);
 				lcd_str.len = strlen(lcd_str.input);
 				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
+				usleep(1000000);
+
+				co2_value = atoi(co2_str);
+				dust_value = atoi(dust_str);
+				co2_state = getCO2State(co2_value);
+				dust_state = getDustState(dust_value);
+
+				//ioctl(co2_led_fd, LED_CONTROL, &co2_state);
+				//ioctl(dust_led_fd, LED_CONTROL, &dust_state);
 
 				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 				break;
