@@ -65,7 +65,9 @@ int main(void){
 
    
    	uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
-   	mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev);
+   	if(mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev)<0){
+		fprintf(stderr, "%d\n",errno);
+	}
    
    	uart_fd = open(UART_DEV_PATH_NAME, O_RDWR | O_NOCTTY | O_NDELAY); //Open in non blocking read/write mode
    
@@ -92,8 +94,6 @@ int main(void){
 				state = 1; 
 			}else if(temp == 'E'){ //end of message
 				state = -1;
-				printf("%s", co2_str);
-				printf("%s", dust_str);
 				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 				break;
 			}else{
