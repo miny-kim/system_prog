@@ -8,7 +8,7 @@
 #include <sys/ioctl.h>
 #include <sys/sysmacros.h>
 
-#define LED_MAJOR_NUMBER 502
+#define LED_MAJOR_NUMBER 505
 #define LED_MINOR_NUMBER 100
 #define LED_DEV_PATH_NAME "led_dev"
 #define LED_MAGIC_NUMBER 'j'
@@ -34,7 +34,7 @@ int main(void){
 	}
 	
 	while(1){
-        printf("enter color to control (R=0/G=1/B=2/exit=-1): ");
+        printf("enter color to control (None=0/R=1/G=2/B=3/exit=-1): ");
 		scanf("%d", &color);
         if(color == -1) break;
 		ioctl(led_fd, LED_CONTROL, &color);

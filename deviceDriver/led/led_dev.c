@@ -9,7 +9,7 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
-#define LED_MAJOR_NUMBER 502
+#define LED_MAJOR_NUMBER 505
 #define LED_DEV_NAME "led_dev"
 #define LED_MAGIC_NUMBER 'j'
 
@@ -41,6 +41,9 @@ int led_open(struct inode *inode, struct file *filp){
 }
 
 int led_release(struct inode *inode, struct file *filp){
+	*gpclr0 |= (1<<16); //off
+    *gpclr0|= (1<<17); //off
+    *gpclr0 |= (1<<18); //off
 	printk(KERN_ALERT "LED driver closed!!\n");
 	iounmap((void*)gpio_base);
 	return 0;
@@ -52,25 +55,28 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 		case LED_CONTROL:
 			copy_from_user(&kbuf, (const void*)arg, 4);
 			if(kbuf == 0){
+				printk(KERN_INFO "LED - Black\n");
+                *gpclr0 |= (1<<16); //off
+                *gpclr0|= (1<<17); //off
+                *gpclr0 |= (1<<18); //off
+			}else if(kbuf == 1){
                 //set state great
                 printk(KERN_INFO "LED - Red\n");
-                *gpset1 |= (1<<16); //on
-                *gpclr1 |= (1<<17); //off
-                *gpclr1 |= (1<<18); //off
-
-            }else if(kbuf == 1){
+                *gpset0 |= (1<<16); //on
+                *gpclr0|= (1<<17); //off
+                *gpclr0 |= (1<<18); //off
+            }else if(kbuf == 2){
                 //set state good
                 printk(KERN_INFO "LED - Green\n");
-                *gpclr1 |= (1<<16); //off
-                *gpset1 |= (1<<17); //on
-                *gpclr1 |= (1<<18); //off
-         
-            }else if(kbuf == 2){
+                *gpclr0 |= (1<<16); //off
+                *gpset0 |= (1<<17); //on
+                *gpclr0 |= (1<<18); //off
+            }else if(kbuf == 3){
                 //set state bad
                 printk(KERN_INFO "LED - Blue\n");
-                *gpclr1 |= (1<<16); //off
-                *gpclr1 |= (1<<17); //off
-                *gpset1 |= (1<<18); //on
+                *gpclr0 |= (1<<16); //off
+                *gpclr0 |= (1<<17); //off
+                *gpset0 |= (1<<18); //on
             }
             else{
                 //error
