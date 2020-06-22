@@ -21,24 +21,30 @@
 #define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
 #define BUTTON_MAJOR_NUMBER 504
-#define BUTTON_MINOR_NUMBER 100
 #define BUTTON_DEV_PATH_NAME "/dev/button_dev"
 #define BUTTON_MAGIC_NUMBER 'j'
 
-#define BUTTON_GET_STATE _IOR(BUTTON_MAGIC_NUMBER, 0 , int)
+#define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
+#define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
 
 #define UART_MAJOR_NUMBER 502
 #define UART_MINOR_NUMBER 100
 #define UART_DEV_PATH_NAME "/dev/uart_ioctl"
 #define IOCTL_MAGIC_NUMBER 'u'
 
-#define KBHIT_ENTER 10
 #define STRING_LENGTH 128
 #define LCD_LENGTH 16
 
 #define IOCTL_CMD_TRANSMIT _IOWR(IOCTL_MAGIC_NUMBER, 0, int)
 #define IOCTL_CMD_RECEIVE _IOWR(IOCTL_MAGIC_NUMBER, 1, int)
 #define IOCTL_CMD_ARRIVED _IOR(IOCTL_MAGIC_NUMBER, 2, int)
+
+#define LED_MAJOR_NUMBER 505
+#define LED_DEV_NAME "led_dev"
+#define LED_MAGIC_NUMBER 'j'
+
+#define LED_START _IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
+#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 1, int)
 
 struct write_data{
 	char* input;
@@ -52,10 +58,11 @@ int main(void){
    	char in[STRING_LENGTH];
 	char co2_str[LCD_LENGTH];
 	char dust_str[LCD_LENGTH];
-	char test_input[STRING_LENGTH]= "C1234.56D7890.12E";
+	char test_input[STRING_LENGTH]= "C12D34E";
 	int i = 0;
-	int d = -1;
 	char result;
+	int state = -1;
+
    
    	uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
    	mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev);
@@ -77,20 +84,27 @@ int main(void){
    	while(1){
 		temp = ioctl(uart_fd, IOCTL_CMD_RECEIVE, NULL);
       	if(temp >= 0){
-			if((i==0 && temp == 'C')||i>0){
-				in[i++] = result;
-			}
-			if(i>0 && temp == 'E'){ //end of message
-				for(i = 0; in[i] != '\0'; i++){
-					if(in[i]=='D'){
-						d = i;
-						break;
-					}
-				}
-				co2_str = 
-				printf("%s", in);
+			if(temp == 'C'){
+				i=0;
+				state = 0;
+			}else if(temp == 'D'){
+				i = 0;
+				state = 1; 
+			}else if(temp == 'E'){ //end of message
+				state = -1;
+				printf("%s", co2_str);
+				printf("%s", dust_str);
 				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 				break;
+			}else{
+				switch(state){
+					case 0:
+						co2_str[i++] = temp;
+						break;
+					case 1:
+						dust_str[i++] = temp;
+						break;
+				}
 			}
 		}
 	}

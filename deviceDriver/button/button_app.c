@@ -22,6 +22,8 @@ int main(void){
 	volatile int button_state = 0;
 	volatile int new_state = 0;
 	volatile int count =0;
+
+	unsigned int gpio_input = 20;
 	
 	button_dev = makedev(BUTTON_MAJOR_NUMBER, BUTTON_MINOR_NUMBER);
 	if (mknod(BUTTON_DEV_PATH_NAME, S_IFCHR|0666, button_dev)<0){
@@ -33,6 +35,8 @@ int main(void){
 		printf("fail to open button_dev\n");
 		return -1;
 	}
+
+	ioctl(button_fd, BUTTON_START, &gpio_input)
 
 	while(count < 100){
 		usleep(1000000);

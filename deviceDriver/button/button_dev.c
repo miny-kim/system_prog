@@ -9,28 +9,34 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
-#define GPIO_BASE_ADDR 0x3F200000
-#define GPFSEL2 0x08
-#define GPSET0 0x1C
-#define GPLEV0 0x34
+#define GPIO_BASE_ADDR	0x3F200000
+#define GPFSEL0			0x00
+#define GPFSEL1			0x04
+#define GPFSEL2			0x08
+#define GPLEV0			0x34
 
-#define BUTTON_MAJOR_NUMBER 504
-#define BUTTON_DEV_NAME "button_dev"
-#define BUTTON_MAGIC_NUMBER 'j'
+#define BUTTON_MAJOR_NUMBER	504
+#define BUTTON_DEV_NAME		"button_dev"
+#define BUTTON_MAGIC_NUMBER	'j'
 
-#define BUTTON_GET_STATE _IOR(BUTTON_MAGIC_NUMBER, 0 , int)
+#define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
+#define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
 
 static void __iomem *gpio_base;
+volatile unsigned int *gpsel0;
+volatile unsigned int *gpsel1;
 volatile unsigned int *gpsel2;
-volatile unsigned int *gpset0;
 volatile unsigned int *gplev0;
+
+unsigned int gpio_input;
 
 int button_open(struct inode *inode, struct file *filp){
 	printk(KERN_ALERT "Button - Open\n");
 	
 	gpio_base = ioremap(GPIO_BASE_ADDR, 0x60);
+	gpsel0 = (volatile unsigned int *)(gpio_base + GPFSEL0);
+	gpsel1 = (volatile unsigned int *)(gpio_base + GPFSEL1);
 	gpsel2 = (volatile unsigned int *)(gpio_base + GPFSEL2);
-	gpset0 = (volatile unsigned int *)(gpio_base + GPSET0);
 	gplev0 = (volatile unsigned int *)(gpio_base + GPLEV0);
 
 	return 0;
@@ -44,11 +50,25 @@ int button_release(struct inode *inode, struct file *filp){
 
 long button_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	int buffer = -1;
-	//*gpset0 |= (1<<21); //see if I can change this with 3.3V
-	
 	switch(cmd){
+		case BUTTON_START:
+			copy_from_user(&gpio_input, (void*)arg, 4);
+			switch(gpio_input/10){ //set gpio_input to input
+				case 0:
+					gpsel0 &= ~(111<<(((gpio_input)%10)*3));
+					break;
+				case 1:
+					gpsel1 &= ~(111<<(((gpio_input)%10)*3));
+					break;
+				case 2:
+					gpsel2 &= ~(111<<(((gpio_input)%10)*3));
+					break;
+				default:
+					printk(KERN_ALERT"BUTTON - Invalid GPIO Port Number\n");
+			}
+			break;
 		case BUTTON_GET_STATE:
-			buffer = (*gplev0>>20) & 1;
+			buffer = (*gplev0>>gpio_input) & 1;
 			printk(KERN_ALERT "Button - Get State %d\n", buffer);
 			copy_to_user((void*)arg, &buffer, 4);
 			break;

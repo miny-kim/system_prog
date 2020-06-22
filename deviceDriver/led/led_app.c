@@ -13,14 +13,14 @@
 #define LED_DEV_PATH_NAME "led_dev"
 #define LED_MAGIC_NUMBER 'j'
 
-#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 0, int)
+#define LED_START _IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
+#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 1, int)
 
 int main(void){
 	dev_t led_dev;
 	int led_fd;
-
+	unsigned int gpio[3] = [17,27,22];
     int color;
-    int on;
 
 	led_dev = makedev(LED_MAJOR_NUMBER, LED_MINOR_NUMBER);
 	if (mknod(LED_DEV_PATH_NAME, S_IFCHR|0666, led_dev)<0){
@@ -33,6 +33,8 @@ int main(void){
 		return -1;
 	}
 	
+	ioctl(led_fd, LED_START, &gpio);
+
 	while(1){
         printf("enter color to control (None=0/R=1/G=2/B=3/exit=-1): ");
 		scanf("%d", &color);
