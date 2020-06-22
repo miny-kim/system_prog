@@ -9,19 +9,19 @@
 #include <sys/sysmacros.h>
 
 #define BUTTON_MAJOR_NUMBER 504
-#define BUTTON_DEV_NAME "button_dev"
+#define BUTTON_MINOR_NUMBER 100
+#define BUTTON_DEV_PATH_NAME "button_dev"
 #define BUTTON_MAGIC_NUMBER 'j'
 
-#define BUTTON_START _IOW(BUTTON_MAGIC_NUMBER, 0 , unsigned int)
-#define BUTTON_GET_STATE _IOR(BUTTON_MAGIC_NUMBER, 1 , int)
+#define BUTTON_GET_STATE _IOR(BUTTON_MAGIC_NUMBER, 0 , int)
 
 int main(void){
 	dev_t button_dev;
 	int button_fd;
 	
-	int button_state = 0;
-	int new_state = 0;
-	int count =0;
+	volatile int button_state = 0;
+	volatile int new_state = 0;
+	volatile int count =0;
 	
 	button_dev = makedev(BUTTON_MAJOR_NUMBER, BUTTON_MINOR_NUMBER);
 	if (mknod(BUTTON_DEV_PATH_NAME, S_IFCHR|0666, button_dev)<0){
@@ -33,12 +33,15 @@ int main(void){
 		printf("fail to open button_dev\n");
 		return -1;
 	}
-	
-	while(count < 1000){
-		usleep(10000);
+
+	while(count < 100){
+		usleep(1000000);
 		ioctl(button_fd, BUTTON_GET_STATE, &new_state);
 		if(button_state==0 && new_state==1){
-			printf("Pressed\n");
+			printf("Pressed 1\n");
+		}
+		else if(button_state==1 && new_state==0){
+			printf("Pressed 0\n");
 		}
 		button_state = new_state;
 		count++;
