@@ -18,29 +18,26 @@
 #define BUTTON_DEV_NAME "button_dev"
 #define BUTTON_MAGIC_NUMBER 'j'
 
-#define BUTTON_START _IOW(BUTTON_MAGIC_NUMBER, 0 , unsigned int)
-#define BUTTON_GET_STATE _IOR(BUTTON_MAGIC_NUMBER, 1 , int)
+#define BUTTON_GET_STATE _IOR(BUTTON_MAGIC_NUMBER, 0 , int)
 
 static void __iomem *gpio_base;
 volatile unsigned int *gpsel2;
 volatile unsigned int *gpset0;
 volatile unsigned int *gplev0;
 
-unsigned int gpio_in;// can only be set gpio twenties
-
 int button_open(struct inode *inode, struct file *filp){
-	printk(KERN_ALERT "button driver open!!\n");
+	printk(KERN_ALERT "Button - Open\n");
 	
 	gpio_base = ioremap(GPIO_BASE_ADDR, 0x60);
 	gpsel2 = (volatile unsigned int *)(gpio_base + GPFSEL2);
 	gpset0 = (volatile unsigned int *)(gpio_base + GPSET0);
 	gplev0 = (volatile unsigned int *)(gpio_base + GPLEV0);
-	
+
 	return 0;
 }
 
 int button_release(struct inode *inode, struct file *filp){
-	printk(KERN_ALERT "button driver closed!!\n");
+	printk(KERN_ALERT "Button - Close\n");
 	iounmap((void*)gpio_base);
 	return 0;
 }
@@ -50,12 +47,9 @@ long button_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	//*gpset0 |= (1<<21); //see if I can change this with 3.3V
 	
 	switch(cmd){
-        case BUTTON_START: 
-            copy_from_user(&gpio_in, (void*)arg, 4);
-            *gpsel2 &= ~(gpio_in%20); //gpio 20 to input
-            //*gpsel2 |= (1<<3); //gpio 21 to output // see if I can change this with 3.3V
 		case BUTTON_GET_STATE:
-			buffer = (*gplev0>>gpio_in)&1;
+			buffer = (*gplev0>>20) & 1;
+			printk(KERN_ALERT "Button - Get State %d\n", buffer);
 			copy_to_user((void*)arg, &buffer, 4);
 			break;
 		default:
@@ -90,4 +84,4 @@ module_exit(button_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("JeongMin Choi");
-MODULE_DESCRIPTION("Device Driver for Button & Switch, IN = GPIO twenties");
+MODULE_DESCRIPTION("Device Driver for Button & Switch");
