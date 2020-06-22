@@ -24,7 +24,9 @@
 #define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 1, int)
 
 static void __iomem *gpio_base;
+volatile unsigned int *gpsel0;
 volatile unsigned int *gpsel1;
+volatile unsigned int *gpsel2;
 volatile unsigned int *gpset0;
 volatile unsigned int *gpclr0;
 
@@ -66,13 +68,13 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			for(i=0; i<3; i++){
 				switch(gpio_color[i]/10){ //set gpio_color to output
 				case 0:
-					gpsel0 |= (1<<(((gpio_input)%10)*3));
+					*gpsel0 |= (1<<(((gpio_color[i])%10)*3));
 					break;
 				case 1:
-					gpsel1 |= (1<<(((gpio_input)%10)*3));
+					*gpsel1 |= (1<<(((gpio_color[i])%10)*3));
 					break;
 				case 2:
-					gpsel2 |= (1<<(((gpio_input)%10)*3));
+					*gpsel2 |= (1<<(((gpio_color[i])%10)*3));
 					break;
 				default:
 					printk(KERN_ALERT"BUTTON - Invalid GPIO Port Number\n");
@@ -80,7 +82,6 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			}
 			break;
 		case LED_CONTROL:
-			int i;
 			copy_from_user(&kbuf, (const void*)arg, 4);
 			if(0<=kbuf && kbuf <=3){
 				for(i=0; i<3; i++){

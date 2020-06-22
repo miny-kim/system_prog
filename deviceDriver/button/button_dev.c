@@ -55,13 +55,13 @@ long button_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			copy_from_user(&gpio_input, (void*)arg, 4);
 			switch(gpio_input/10){ //set gpio_input to input
 				case 0:
-					gpsel0 &= ~(111<<(((gpio_input)%10)*3));
+					*gpsel0 &= ~(111<<((gpio_input%10)*3));
 					break;
 				case 1:
-					gpsel1 &= ~(111<<(((gpio_input)%10)*3));
+					*gpsel1 &= ~(111<<(((gpio_input)%10)*3));
 					break;
 				case 2:
-					gpsel2 &= ~(111<<(((gpio_input)%10)*3));
+					*gpsel2 &= ~(111<<(((gpio_input)%10)*3));
 					break;
 				default:
 					printk(KERN_ALERT"BUTTON - Invalid GPIO Port Number\n");

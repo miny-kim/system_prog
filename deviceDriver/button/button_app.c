@@ -13,7 +13,8 @@
 #define BUTTON_DEV_PATH_NAME "button_dev"
 #define BUTTON_MAGIC_NUMBER 'j'
 
-#define BUTTON_GET_STATE _IOR(BUTTON_MAGIC_NUMBER, 0 , int)
+#define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
+#define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
 
 int main(void){
 	dev_t button_dev;
@@ -36,10 +37,10 @@ int main(void){
 		return -1;
 	}
 
-	ioctl(button_fd, BUTTON_START, &gpio_input)
+	ioctl(button_fd, BUTTON_START, &gpio_input);
 
 	while(count < 100){
-		usleep(1000000);
+		usleep(1000);
 		ioctl(button_fd, BUTTON_GET_STATE, &new_state);
 		if(button_state==0 && new_state==1){
 			printf("Pressed 1\n");
