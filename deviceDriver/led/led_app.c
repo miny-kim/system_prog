@@ -13,12 +13,7 @@
 #define LED_DEV_PATH_NAME "led_dev"
 #define LED_MAGIC_NUMBER 'j'
 
-#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 0, struct control_data)
-
-struct control_data{
-    int color;
-    int on;
-}
+#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 0, int)
 
 int main(void){
 	dev_t led_dev;
@@ -42,10 +37,7 @@ int main(void){
         printf("enter color to control (R=0/G=1/B=2/exit=-1): ");
 		scanf("%d", &color);
         if(color == -1) break;
-        printf("turn on or off (on = 1, off = 0): ");
-        scanf("%d", &on);
-		ioctl(led_fd, IOCTL_CMD_TOGGLE);
-		count = 0;
+		ioctl(led_fd, LED_CONTROL, &color);
 	}
 	
 	close(led_fd);

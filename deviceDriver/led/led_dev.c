@@ -10,7 +10,7 @@
 #include <asm/uaccess.h>
 
 #define LED_MAJOR_NUMBER 502
-#define LED_DEV_NAME "led_ioctl"
+#define LED_DEV_NAME "led_dev"
 #define LED_MAGIC_NUMBER 'j'
 
 #define GPIO_BASE_ADDR 0x3F200000
@@ -18,17 +18,12 @@
 #define GPSET0 0x1C
 #define GPCLR0 0x28
 
-#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 0, struct control_data)
+#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 0, int)
 
 static void __iomem *gpio_base;
 volatile unsigned int *gpsel1;
 volatile unsigned int *gpset0;
 volatile unsigned int *gpclr0;
-
-struct control_data{
-    int color;
-    int on;
-}
 
 int led_open(struct inode *inode, struct file *filp){
 	printk(KERN_ALERT "LED driver open!!\n");
@@ -52,23 +47,37 @@ int led_release(struct inode *inode, struct file *filp){
 }
 
 long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
-	struct control_data c_data;
-    int reg;
+	int kbuf = -1;
     switch(cmd){
 		case LED_CONTROL:
-			copy_from_user((void*)arg, &c_data, sizeof(struct control_data));
-            if(0<=c_data.color && c_data.color<=2){
-                reg = 16 + c_data.color;
-            }else{
-                printk(KERN_ALERT "LED - Invalid Color\n");
-			    return -1;
+			copy_from_user(&kbuf, (const void*)arg, 4);
+			if(kbuf == 0){
+                //set state great
+                printk(KERN_INFO "LED - Red\n");
+                *gpset1 |= (1<<16); //on
+                *gpclr1 |= (1<<17); //off
+                *gpclr1 |= (1<<18); //off
+
+            }else if(kbuf == 1){
+                //set state good
+                printk(KERN_INFO "LED - Green\n");
+                *gpclr1 |= (1<<16); //off
+                *gpset1 |= (1<<17); //on
+                *gpclr1 |= (1<<18); //off
+         
+            }else if(kbuf == 2){
+                //set state bad
+                printk(KERN_INFO "LED - Blue\n");
+                *gpclr1 |= (1<<16); //off
+                *gpclr1 |= (1<<17); //off
+                *gpset1 |= (1<<18); //on
             }
-            if(c_data.on){
-                gpset0 |= (1<<reg);
-            }else{
-                gpclr0 |= (1<<reg);
+            else{
+                //error
+                printk(KERN_ALERT "ERROR state parameter error\n");
+                return -1;
             }
-			break;
+            break;
 		default:
 			printk(KERN_ALERT "Unknown command!\n");
 			return -1;
