@@ -224,8 +224,10 @@ bool i2c_read(u_int8_t* buf, int len){
 #define Rw	0b00000010  // Read/Write bit
 #define Rs	0b00000001  // Register select bit
 
+#define LCD_LENGTH		16
+
 struct write_data{
-	char* input;
+	char input[LCD_LENGTH];
 	int len;
 };
 

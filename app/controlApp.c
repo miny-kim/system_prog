@@ -43,8 +43,7 @@
 #define LED_MAJOR_NUMBER		505
 #define LED_DEV_PATH_NAME		"/dev/led_dev"
 #define LED_MAGIC_NUMBER		'j'
-#define LED_CO2_MINOR_NUMBER	100
-#define LED_DUST_MINOR_NUMBER	101
+#define LED_MINOR_NUMBER		100
 
 #define LED_START	_IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
 #define LED_CONTROL	_IOW(LED_MAGIC_NUMBER, 1, int)
@@ -56,11 +55,6 @@
 #define AIR_GREAT	400
 #define AIR_GOOD	500
 #define AIR_BAD		700
-
-struct write_data{
-	char* input;
-	int len;
-};
 
 int getCO2State(int co2_value){
 	if(CO2_BAD < co2_value) return 1;
@@ -74,6 +68,11 @@ int getDustState(int dust_value){
 	return 3; 
 }
 
+struct write_data{
+	char input[LCD_LENGTH];
+	int len;
+};
+
 int main(void){
 	dev_t uart_dev;
    	int uart_fd;
@@ -81,11 +80,8 @@ int main(void){
 	dev_t lcd_dev;
 	int lcd_fd;
 
-	dev_t co2_led_dev;
-	int co2_led_fd;
-	
-	dev_t dust_led_dev;
-	int dust_led_fd;
+	dev_t led_dev;
+	int led_fd;
 
 	u_int8_t slaveAddr = 0x27;
 	unsigned int co2_gpio[3] = {17,27,22};
@@ -97,14 +93,13 @@ int main(void){
 	char result;
 	int state = -1;
 	struct write_data lcd_str;
-	unsigned int setLine = 1;
 
 	char co2_str[LCD_LENGTH];
 	char dust_str[LCD_LENGTH];
-	int co2_value;
-	int dust_value;
-	int co2_state;
-	int dust_state;
+	volatile int co2_value;
+	volatile int dust_value;
+	volatile int co2_state;
+	volatile int dust_state;
 	
    	uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
    	if(mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev)<0){
@@ -122,38 +117,24 @@ int main(void){
 		fprintf(stderr, "%d\n", errno);
 	}
 	
-	/*lcd_fd = open(LCD_DEV_PATH_NAME, O_RDWR);
+	lcd_fd = open(LCD_DEV_PATH_NAME, O_RDWR);
 	if(lcd_fd < 0){
 		printf("fail to open lcd_dev\n");
 		return -1;
 	}
 
-	co2_led_dev = makedev(LED_MAJOR_NUMBER, LED_CO2_MINOR_NUMBER);
-	if (mknod(LED_DEV_PATH_NAME, S_IFCHR|0666, co2_led_dev)<0){
+	led_dev = makedev(LED_MAJOR_NUMBER, LED_MINOR_NUMBER);
+	if (mknod(LED_DEV_PATH_NAME, S_IFCHR|0666, led_dev)<0){
 		fprintf(stderr, "%d\n", errno);
 	}
 	
-	co2_led_fd = open(LED_DEV_PATH_NAME, O_RDWR);
-	if(co2_led_fd < 0){
+	led_fd = open(LED_DEV_PATH_NAME, O_RDWR);
+	if(led_fd < 0){
 		printf("fail to open led_dev\n");
 		return -1;
 	}
-
-	dust_led_dev = makedev(LED_MAJOR_NUMBER, LED_DUST_MINOR_NUMBER);
-	if (mknod(LED_DEV_PATH_NAME, S_IFCHR|0666, dust_led_dev)<0){
-		fprintf(stderr, "%d\n", errno);
-	}
-	
-	dust_led_fd = open(LED_DEV_PATH_NAME, O_RDWR);
-	if(dust_led_fd < 0){
-		printf("fail to open led_dev\n");
-		return -1;
-	}*/
 
 	ioctl(lcd_fd, LCD_START, &slaveAddr);
-	//ioctl(co2_led_fd, LED_START, &co2_gpio);
-	//ioctl(dust_led_fd, LED_START, &dust_gpio);
-
 
 	//test
    	for(i = 0 ; i < strlen(test_input); i++){
@@ -168,21 +149,24 @@ int main(void){
 				i=0;
 				state = 0;
 			}else if(temp == 'D'){
+				co2_str[i] = '\0';
 				i = 0;
 				state = 1; 
 			}else if(temp == 'E'){ //end of message
+				dust_str[i] = '\0';
 				state = -1;
 				//문제점: next line이 잘 안되고 dust 뒤에 쓰레기 값이 들어감
 				ioctl(lcd_fd, LCD_CLEAR);
 				sprintf(lcd_str.input, "CO2: %s", co2_str);
 				lcd_str.len = strlen(lcd_str.input);
+				printf("%s\n",lcd_str.input);
 				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
 				usleep(1000000);
-				ioctl(lcd_fd, LCD_SET_LINE, &setLine);
+				ioctl(lcd_fd, LCD_SET_LINE, 1);
 				usleep(1000000);
 				sprintf(lcd_str.input, "Dust: %s", dust_str);
-				printf("%s", lcd_str.input);
 				lcd_str.len = strlen(lcd_str.input);
+				printf("%s\n",lcd_str.input);
 				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
 				usleep(1000000);
 
@@ -190,9 +174,14 @@ int main(void){
 				dust_value = atoi(dust_str);
 				co2_state = getCO2State(co2_value);
 				dust_state = getDustState(dust_value);
+				printf("%d %d whats wrong?\n", co2_state, dust_state);
 
-				//ioctl(co2_led_fd, LED_CONTROL, &co2_state);
-				//ioctl(dust_led_fd, LED_CONTROL, &dust_state);
+				ioctl(led_fd, LED_START, &co2_gpio);
+				ioctl(led_fd, LED_CONTROL, &co2_state);
+				ioctl(led_fd, LED_START, &dust_gpio);
+				ioctl(led_fd, LED_CONTROL, &dust_state);
+
+				usleep(100000000);
 
 				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 				break;
@@ -211,6 +200,7 @@ int main(void){
    
    close(uart_fd);
    close(lcd_fd);
+   close(led_fd);
    return 0;
 	// print data in l
 	// calculate whether to open or close the window
