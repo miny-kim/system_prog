@@ -48,6 +48,14 @@
 #define LED_START	_IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
 #define LED_CONTROL	_IOW(LED_MAGIC_NUMBER, 1, int)
 
+#define BUTTON_MAJOR_NUMBER	504
+#define BUTTON_DEV_NAME		"button_dev"
+#define BUTTON_MAGIC_NUMBER	'j'
+#define BUTTON_MINOR_NUMBER	100
+
+#define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
+#define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
+
 #define CO2_GREAT	300
 #define CO2_GOOD	400
 #define CO2_BAD		500
@@ -55,6 +63,10 @@
 #define AIR_GREAT	400
 #define AIR_GOOD	500
 #define AIR_BAD		700
+
+#define CLOSE		0
+#define OPEN		1
+#define TOGGLE		2
 
 int getCO2State(int co2_value){
 	if(CO2_BAD < co2_value) return 1;
@@ -83,14 +95,20 @@ int main(void){
 	dev_t led_dev;
 	int led_fd;
 
+	dev_t switch_dev;
+	int switch_fd;
+
 	u_int8_t slaveAddr = 0x27;
 	unsigned int co2_gpio[3] = {17,27,22};
-	unsigned int dust_gpio[3] = {16,20,21};
+	unsigned int dust_gpio[3] = {16,19,21};
+	unsigned int prio_gpio = 23;
+	unsigned int on_gpio = 24;
 
    	long temp;
 	char test_input[STRING_LENGTH]= "C12D34E";//for test delete later
 	int i = 0;
 	char result;
+	char prev_result;
 	int state = -1;
 	struct write_data lcd_str;
 
@@ -100,7 +118,8 @@ int main(void){
 	volatile int dust_value;
 	volatile int co2_state;
 	volatile int dust_state;
-	
+	volatile int on_state;
+	volatile int prio;
    	uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
    	if(mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev)<0){
 		fprintf(stderr, "%d\n",errno);
@@ -134,6 +153,17 @@ int main(void){
 		return -1;
 	}
 
+	switch_dev = makedev(BUTTON_MAJOR_NUMBER, BUTTON_MINOR_NUMBER);
+	if (mknod(BUTTON_DEV_PATH_NAME, S_IFCHR|0666, switch_dev)<0){
+		fprintf(stderr, "%d\n", errno);
+	}
+	
+	switch_fd = open(BUTTON_DEV_PATH_NAME, O_RDWR);
+	if(switch_fd < 0){
+		printf("fail to open button_dev\n");
+		return -1;
+	}
+
 	ioctl(lcd_fd, LCD_START, &slaveAddr);
 
 	//test
@@ -155,7 +185,6 @@ int main(void){
 			}else if(temp == 'E'){ //end of message
 				dust_str[i] = '\0';
 				state = -1;
-				//문제점: next line이 잘 안되고 dust 뒤에 쓰레기 값이 들어감
 				ioctl(lcd_fd, LCD_CLEAR);
 				sprintf(lcd_str.input, "CO2: %s", co2_str);
 				lcd_str.len = strlen(lcd_str.input);
@@ -180,10 +209,26 @@ int main(void){
 				ioctl(led_fd, LED_CONTROL, &co2_state);
 				ioctl(led_fd, LED_START, &dust_gpio);
 				ioctl(led_fd, LED_CONTROL, &dust_state);
+				
+				ioctl(switch_fd, BUTTON_START, &on_gpio);
+				ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
 
+				if(on_state==1){
+					if(co2_state > dust_state) result = OPEN;
+					else if(co2_state < dust_state) result = CLOSE;
+					else{
+						ioctl(switch_fd, BUTTON_START, &prio_gpio);
+						ioctl(switch_fd, BUTTON_GET_STATE, &prio);
+						if(prio ==1) result = OPEN;
+						else result = CLOSE;
+					}
+					if(prev_result != result){
+						ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
+						prev_result = result;
+					}
+					printf("result = %d", result);
+				}
 				usleep(100000000);
-
-				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 				break;
 			}else{
 				switch(state){
@@ -195,6 +240,11 @@ int main(void){
 						break;
 				}
 			}
+		}
+		ioctl(switch_fd, BUTTON_START, &on_gpio);
+		ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
+		if(on_state == 0){
+			
 		}
 	}
    

@@ -19,7 +19,7 @@
 int main(void){
 	dev_t led_dev;
 	int led_fd;
-	unsigned int gpio[3] = {17,27,22};
+	unsigned int gpio[3] = {16,19,21};
     int color;
 
 	led_dev = makedev(LED_MAJOR_NUMBER, LED_MINOR_NUMBER);
