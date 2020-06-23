@@ -228,10 +228,9 @@ int main(void){
 						ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 						prev_result = result;
 					}
-					printf("result = %d", result);
+					//printf("result = %d", result);
 				}
-				usleep(100000000);
-				break;//for test need to delete this
+				//break;//for test need to delete this
 			}else{
 				switch(state){
 					case 0:
@@ -250,8 +249,8 @@ int main(void){
 			ioctl(switch_fd, BUTTON_GET_STATE, &button_state);
 			if(prev_button_state==0 && button_state==1){
 				result = TOGGLE;
-				printf("Toggle\n");
-				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
+				//printf("Toggle\n");
+				ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 			}
 			prev_button_state = button_state;
 		}
