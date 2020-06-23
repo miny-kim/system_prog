@@ -103,6 +103,7 @@ int main(void){
 	unsigned int dust_gpio[3] = {16,19,21};
 	unsigned int prio_gpio = 23;
 	unsigned int on_gpio = 24;
+	unsigned int button_gpio = 20;
 
    	long temp;
 	char test_input[STRING_LENGTH]= "C12D34E";//for test delete later
@@ -120,6 +121,8 @@ int main(void){
 	volatile int dust_state;
 	volatile int on_state;
 	volatile int prio;
+	volatile int button_state;
+	volatile int prev_button_state;
    	uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
    	if(mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev)<0){
 		fprintf(stderr, "%d\n",errno);
@@ -203,7 +206,6 @@ int main(void){
 				dust_value = atoi(dust_str);
 				co2_state = getCO2State(co2_value);
 				dust_state = getDustState(dust_value);
-				printf("%d %d whats wrong?\n", co2_state, dust_state);
 
 				ioctl(led_fd, LED_START, &co2_gpio);
 				ioctl(led_fd, LED_CONTROL, &co2_state);
@@ -229,7 +231,7 @@ int main(void){
 					printf("result = %d", result);
 				}
 				usleep(100000000);
-				break;
+				break;//for test need to delete this
 			}else{
 				switch(state){
 					case 0:
@@ -244,15 +246,20 @@ int main(void){
 		ioctl(switch_fd, BUTTON_START, &on_gpio);
 		ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
 		if(on_state == 0){
-			
+			ioctl(switch_fd, BUTTON_START, &button_gpio);
+			ioctl(switch_fd, BUTTON_GET_STATE, &button_state);
+			if(prev_button_state==0 && button_state==1){
+				result = TOGGLE;
+				printf("Toggle\n");
+				//ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
+			}
+			prev_button_state = button_state;
 		}
 	}
    
    close(uart_fd);
    close(lcd_fd);
    close(led_fd);
+   close(switch_fd);
    return 0;
-	// print data in l
-	// calculate whether to open or close the window
-	// send data with uart 
 }
