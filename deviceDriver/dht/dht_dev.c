@@ -19,7 +19,7 @@
 #define GPCLR0			0x28
 #define GPLEV0			0x34
 
-#define DHT_MAJOR_NUMBER	504
+#define DHT_MAJOR_NUMBER	506
 #define DHT_DEV_NAME		"dht_dev"
 #define DHT_MAGIC_NUMBER	'j'
 
@@ -71,7 +71,7 @@ void dht_input(){
 }
 
 void dht_output(){
-    switch(gpio_pin/10){ //set gpio_pin to input
+    switch(gpio_pin/10){ //set gpio_pin to output
         case 0:
             *gpsel0 |= (1<<((gpio_pin%10)*3));
             break;
@@ -99,7 +99,7 @@ int getTimeout(int res){
 
 int dht_get_humidity(){
     u_int8_t bytes[5];
-    int bitCount = 0;
+    int i;
     struct timeval before;
     struct timeval after;
 
@@ -113,15 +113,21 @@ int dht_get_humidity(){
     if(getTimeout(0)<0) return -1;
     if(getTimeout(1)<0) return -1;
 
-    for(bitCount=0; bitCount < 40; bitCount++){
+    for(i=0; i < 40; i++){
         if(getTimeout(0)<0) return -1;
         gettimeofday(&before, NULL);
         if(getTimeout(1)<0) return -1;
         gettimeofday(&after, NULL);
-        if(after.tv_usec - before.tv_usec > 40){
-            
+        if(after.tv_usec - before.tv_usec > 40000){
+            bytes[i/8] |= (1<<(7-(i%8)));
         }
     }
+    if(bytes[0]+bytes[2] != bytes[4]){
+        printk(KERN_ALERT"DHT - Checksum Error");
+        return -1;
+    }
+
+    return (int)bytes[0];
 
 
 }
@@ -129,12 +135,8 @@ int dht_get_humidity(){
 long dht_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	int buffer = -1;
 	switch(cmd){
-		case DHT_START:
-			copy_from_user(&gpio_pin, (void*)arg, 4);
-			break;
 		case DHT_GET_HUMIDITY:
-			buffer = (*gplev0>>gpio_pin) & 1;
-			printk(KERN_ALERT "Button - Get State %d\n", buffer);
+			buffer = dht_get_humidity();
 			copy_to_user((void*)arg, &buffer, 4);
 			break;
 		default:
