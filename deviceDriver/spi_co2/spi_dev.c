@@ -109,7 +109,7 @@ void spi_begin(void){
     spi_setClockDivider(16);
     spi_setDataMode(0); //cpol = 0, cpha = 0
     spi_chipSelect(0); //using cs0
-    spi_setChipSelectPolarity(SPI0_CS_CSPOL0, 0);
+    spi_setChipSelectPolarity(0, 0);
     
     printk(KERN_ALERT "spi init!!\n");
     
@@ -169,10 +169,17 @@ int co2_open(struct inode * inode, struct file * filp){
     gpfsel0 = (volatile unsigned int *)(gpio_base + GPFSEL0);
     gpfsel1 = (volatile unsigned int *)(gpio_base + GPFSEL1);
     
-    *gpfsel0 |= (4 << 27); //#9 change function alt0
-    *gpfsel1 |= (4 << 0); //#10 change function alt0
-    *gpfsel1 |= (4 << 3); //#11 change function alt0
-    *gpfsel0 |= (1 << 24); //#8 out
+    *gpfsel0 |= (7<<(3*9)); //GPIO9
+    *gpfsel0 &= ~(3<<(3*9)); //ALT0 -> MISO
+    
+    *gpfsel1 |= (7); //GPIO10
+    *gpfsel1 &= ~(3); //ALT0 -> MOSI
+    
+    *gpfsel1 |= (7<<3); //GPIO11
+    *gpfsel1 &= ~(3<<3); //ALT0 -> CLK
+    
+    *gpfsel0 |= (7<<24); //GPIO8
+    *gpfsel0 &= ~(3<<24); //ALT0 -> CE0
     
     spi_begin();
     
@@ -184,10 +191,20 @@ int co2_release(struct inode *inode, struct file *filp){
     
     printk(KERN_ALERT "co2 driver closed!!\n");
     
-    *gpfsel0 &= (0 << 27); //#9 input mode
-    *gpfsel1 &= (0 << 0); //#10
-    *gpfsel1 &= (0 << 3); //#11
-    *gpfsel0 &= (0 << 24); //#8
+    *gpfsel0 |= (7<<(3*9));
+    *gpfsel0 &= ~(7<<(3*9));
+    
+    *gpfsel1 |= (7);
+    *gpfsel1 &= ~(7);
+    
+    *gpfsel1 |= (7<<3);
+    *gpfsel1 &= ~(7<<3);
+    
+    *gpfsel0 |= (7<<24);
+    *gpfsel0 &= ~(7<<24);
+    
+    *gpfsel0 |= (7<<21);
+    *gpfsel0 &= ~(7<<21);
     
     iounmap((void*)gpio_base);
     iounmap((void*)spi0_base);
@@ -212,7 +229,7 @@ ssize_t co2_read(struct file *filp, char * buf, size_t count, loff_t *f_pos){
     
     aValue = (((rbuf[1] & 0x0F) << 8) | rbuf[2]);
     
-    printk(KERN_ALERT "adc transfer : %d!!\n", &aValue);
+    printk(KERN_ALERT "adc transfer : %d!!\n", aValue);
     
     copy_to_user(buf, &aValue, sizeof(float));
     
@@ -245,4 +262,3 @@ module_init(co2_init);
 module_exit(co2_exit);
 
 MODULE_AUTHOR("Minyeong");
-

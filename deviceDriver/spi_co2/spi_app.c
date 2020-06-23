@@ -11,7 +11,7 @@
 #define CO2_MAJOR_NUMBER 504
 #define CO2_DEV_PATH_NAME "/dev/try_co2"
 
-#define INTERVAL 500000
+#define INTERVAL 3000000
 
 //#define IOCTL_MAGIC_NUMBER 'u'
 //#define IOCTL_CMD_TRANSMIT _IOWR(IOCTL_MAGIC_NUMBER, 0, int)
@@ -21,7 +21,7 @@ int main()
 {
     dev_t co2_dev;
     int fd, ppm;
-    float temp, rs, ratio, co2_ppm;
+    float temp, rs, ratio, co2_ppm, para = 116.6020682, parab = 2.769034857, rzero = 76.63, rload = 5;
     
     co2_dev = makedev(CO2_MAJOR_NUMBER, CO2_MINOR_NUMBER);
     mknod(CO2_DEV_PATH_NAME, S_IFCHR|0666, co2_dev);
@@ -38,13 +38,19 @@ int main()
         printf("read...\n");
         read(fd, &ppm, sizeof(int));
         
-        temp = ppm * 3.3 / 4095.0;
-       
+        temp = (float)ppm * 3.3 / 1024.0;
+        
+        //co2_ppm = ppm * 3.3 / 1024;
+        
         if(temp <1)
             temp = 1;
         
-        rs = 10 * (5.0 - temp) / temp;
-        ratio = rs / 76.63;
+        // rs = rload * (5.0 - temp) / temp;
+        // ratio = rs / rzero;
+        // co2_ppm = (146.15*(2.868-ratio)+10);
+        
+        rs = rload * (5.0 - temp) / temp;
+        ratio = rs / rzero;
         co2_ppm = (146.15*(2.868-ratio)+10);
         
         printf("Current CO2 ppm is:%f ppm\n", co2_ppm);
