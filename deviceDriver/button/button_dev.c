@@ -69,7 +69,7 @@ long button_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			break;
 		case BUTTON_GET_STATE:
 			buffer = (*gplev0>>gpio_input) & 1;
-			printk(KERN_ALERT "Button - Get State %d\n", buffer);
+			//printk(KERN_ALERT "Button - Get State %d\n", buffer);
 			copy_to_user((void*)arg, &buffer, 4);
 			break;
 		default:
