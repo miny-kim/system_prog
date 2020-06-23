@@ -10,10 +10,10 @@
 
 #define DHT_MAJOR_NUMBER	506
 #define DHT_MINOR_NUMBER    100
-#define DHT_DEV_NAME		"dht_dev"
+#define DHT_DEV_PATH_NAME	"dht_dev"
 #define DHT_MAGIC_NUMBER	'j'
 
-#define DHT_START		_IOW(DHT_MAGIC_NUMBER, 0, unsigned int)
+#define DHT_START			_IOW(DHT_MAGIC_NUMBER, 0, unsigned int)
 #define DHT_GET_HUMIDITY	_IOR(DHT_MAGIC_NUMBER, 1 , int)
 
 int main(void){
@@ -37,7 +37,7 @@ int main(void){
 
 	ioctl(dht_fd, DHT_START, &gpio_input);
 
-	while(count < 10){
+	while(count < 3){
 		usleep(1000);
 		ioctl(dht_fd, DHT_GET_HUMIDITY, &humidity);
 		printf("humidity : %d\n", humidity);
