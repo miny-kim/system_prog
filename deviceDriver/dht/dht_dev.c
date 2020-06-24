@@ -103,6 +103,7 @@ int dht_get_humidity(void){
     u_int8_t bytes[5];
     int i;
     u64 before;
+    u64 mid;
     u64 after;
 
     for(i = 0; i<5; i++){
@@ -119,12 +120,13 @@ int dht_get_humidity(void){
     if(getTimeout(1)<0) return -1;//lasts 80us
 
     for(i=0; i < 40; i++){
-        if(getTimeout(0)<0) return -1;//initiate send 1 bit 50us 
         before = ktime_get_real_ns();
+        if(getTimeout(0)<0) return -1;//initiate send 1 bit 50us 
+        mid = ktime_get_real_ns();
         if(getTimeout(1)<0) return -1;//26-28us = 0, 70us = 1
         after = ktime_get_real_ns();
-        printk(KERN_INFO"time : %lld",after - before);
-        if(after - before > 400){
+        printk(KERN_INFO"time : %lld %lld\n",after - mid, mid -before);
+        if(after - mid > mid - before){
             bytes[i/8] |= (1<<(7-(i%8)));
         }
     }
