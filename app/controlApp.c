@@ -56,27 +56,25 @@
 #define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
 #define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
 
-#define CO2_GREAT	300
 #define CO2_GOOD	400
 #define CO2_BAD		500
 
-#define AIR_GREAT	400
-#define AIR_GOOD	500
-#define AIR_BAD		700
+#define AIR_GOOD	30
+#define AIR_BAD		70
 
 #define CLOSE		0
 #define OPEN		1
 #define TOGGLE		2
 
 int getCO2State(int co2_value){
-	if(CO2_BAD < co2_value) return 1;
-	if(CO2_GOOD < co2_value) return 2;
+	if(CO2_BAD > co2_value) return 1;
+	if(CO2_GOOD > co2_value) return 2;
 	return 3; 
 }
 
 int getDustState(int dust_value){
-	if(AIR_BAD < dust_value) return 1;
-	if(AIR_GOOD < dust_value) return 2;
+	if(AIR_BAD > dust_value) return 1;
+	if(AIR_GOOD > dust_value) return 2;
 	return 3; 
 }
 
@@ -170,10 +168,12 @@ int main(void){
 	ioctl(lcd_fd, LCD_START, &slaveAddr);
 
 	//test
+	/*
    	for(i = 0 ; i < strlen(test_input); i++){
         ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &test_input[i]);
     	usleep(100);
     }
+	*/
 	//test end
    	while(1){
 		temp = ioctl(uart_fd, IOCTL_CMD_RECEIVE, NULL);
