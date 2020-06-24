@@ -22,6 +22,7 @@
 #define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
 #define BUTTON_MAJOR_NUMBER		504
+#define BUTTON_MINOR_NUMBER		100
 #define BUTTON_DEV_PATH_NAME	"/dev/button_dev"
 #define BUTTON_MAGIC_NUMBER		'j'
 
@@ -48,14 +49,6 @@
 #define LED_START	_IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
 #define LED_CONTROL	_IOW(LED_MAGIC_NUMBER, 1, int)
 
-#define BUTTON_MAJOR_NUMBER	504
-#define BUTTON_DEV_NAME		"button_dev"
-#define BUTTON_MAGIC_NUMBER	'j'
-#define BUTTON_MINOR_NUMBER	100
-
-#define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
-#define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
-
 #define CO2_GOOD	400
 #define CO2_BAD		500
 
@@ -67,14 +60,14 @@
 #define TOGGLE		2
 
 int getCO2State(int co2_value){
-	if(CO2_BAD > co2_value) return 1;
-	if(CO2_GOOD > co2_value) return 2;
+	if(CO2_BAD < co2_value) return 1;
+	if(CO2_GOOD < co2_value) return 2;
 	return 3; 
 }
 
 int getDustState(int dust_value){
-	if(AIR_BAD > dust_value) return 1;
-	if(AIR_GOOD > dust_value) return 2;
+	if(AIR_BAD < dust_value) return 1;
+	if(AIR_GOOD < dust_value) return 2;
 	return 3; 
 }
 
@@ -97,8 +90,8 @@ int main(void){
 	int switch_fd;
 
 	u_int8_t slaveAddr = 0x27;
-	unsigned int co2_gpio[3] = {17,27,22};
-	unsigned int dust_gpio[3] = {16,19,21};
+	unsigned int co2_gpio[3] = {17,27,6};
+	unsigned int dust_gpio[3] = {16,19,26};
 	unsigned int prio_gpio = 23;
 	unsigned int on_gpio = 24;
 	unsigned int button_gpio = 20;

@@ -4,6 +4,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 #include <asm/mach/map.h>
 #include <asm/io.h>
@@ -121,6 +122,7 @@ int i2c_write_one(u_int8_t buf){
 
 bool i2c_read(u_int8_t* buf, int len){
 	int i =0;
+    printk(KERN_INFO"I2C Reading - Reading data %d len\n", len);
     *bsc1 |= 0x30; //clear fifo
     *bsc1 |= 0x1; //set to read packet transfer
 
@@ -214,18 +216,19 @@ unsigned short crc16(unsigned char *ptr, unsigned char len) {//copied from AM232
     return crc;
 } 
 
-int tnh_read_humidity(int* humidity){
-    u_int8_t awake;
+int tnh_read_humidity(void){
     u_int8_t msg[3];
     u_int8_t buf[6];
-
-    awake = 0x00;
+    int humidity;
 
     msg[0] = TNH_READ;
     msg[1] = TNH_HUMID;
     msg[2] = 0x02;
 
-    i2c_write_one(awake); //wake up
+    //waking up
+    *bsc1 |= 0x8080; //start transfer
+    udelay(900);
+    *bss1 |= 0x2; //end transfer
 
     i2c_write(msg, 3);
     msleep(2);
@@ -246,19 +249,22 @@ int tnh_read_humidity(int* humidity){
         return -1;
     }
 
-    *humidity = (buf[2]<<8) | buf[3];
-    return 0;
+    humidity = buf[2];
+    humidity <<=8;
+    humidity |= buf[3];
+    printk(KERN_INFO "humidity : %d", humidity);
+    return humidity;
 }
 
 long tnh_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
-	int* humidity;
+	int humidity;
     switch(cmd){
         case TNH_READ_HUMIDITY:
-            if(tnh_read_humidity(humidity)<0){
+            if((humidity = tnh_read_humidity())<0){
                 printk(KERN_ALERT "TNH DD - Read Error\n");
 			    return -1;
             }
-            copy_to_user((void*)arg, humidity, 4);
+            copy_to_user((void*)arg, &humidity, 4);
             break;
         default:
 			printk(KERN_ALERT "TNH DD - Unknown Command\n");

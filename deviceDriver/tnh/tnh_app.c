@@ -39,7 +39,7 @@ int main(void){
 	int buf;
 	
 	ioctl(tnh_fd, TNH_READ_HUMIDITY, &buf);
-	printf("Humidity : %d\n", buf);
+	printf("Humidity : %.2f\n", (double)buf/10);
 	
 	close(tnh_fd);
 	
