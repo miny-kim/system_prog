@@ -34,15 +34,11 @@ volatile unsigned int *gpset0;
 volatile unsigned int *gpclr0;
 volatile unsigned int *gplev0;
 
-unsigned int gpio_pin;
-
 int dht_open(struct inode *inode, struct file *filp){
 	printk(KERN_ALERT "DHT - Open\n");
 	
 	gpio_base = ioremap(GPIO_BASE_ADDR, 0x60);
-	gpsel0 = (volatile unsigned int *)(gpio_base + GPFSEL0);
 	gpsel1 = (volatile unsigned int *)(gpio_base + GPFSEL1);
-	gpsel2 = (volatile unsigned int *)(gpio_base + GPFSEL2);
     gpset0 = (volatile unsigned int *)(gpio_base + GPSET0);
 	gpclr0 = (volatile unsigned int *)(gpio_base + GPCLR0);
 	gplev0 = (volatile unsigned int *)(gpio_base + GPLEV0);
@@ -57,51 +53,28 @@ int dht_release(struct inode *inode, struct file *filp){
 }
 
 void dht_input(void){
-    switch(gpio_pin/10){ //set gpio_pin to input
-        case 0:
-            *gpsel0 &= ~(1<<((gpio_pin%10)*3));
-            break;
-        case 1:
-            *gpsel1 &= ~(1<<((gpio_pin%10)*3));
-            break;
-        case 2:
-            *gpsel2 &= ~(1<<((gpio_pin%10)*3));
-            break;
-        default:
-            printk(KERN_ALERT"DHT - Invalid GPIO Port Number\n");
-    }
+    *gpsel1 &= ~(1<<6);
 }
 
 void dht_output(void){
-    switch(gpio_pin/10){ //set gpio_pin to output
-        case 0:
-            *gpsel0 |= (1<<((gpio_pin%10)*3));
-            break;
-        case 1:
-            *gpsel1 |= (1<<((gpio_pin%10)*3));
-            break;
-        case 2:
-            *gpsel2 |= (1<<((gpio_pin%10)*3));
-            break;
-        default:
-            printk(KERN_ALERT"DHT - Invalid GPIO Port Number\n");
-    }
+    *gpsel1 != (1<<6);
 }
 
 int getTimeout(int res){
     int loopCount = 0;
-    while((*gplev0>>gpio_pin)&1==res){
+    while((*gplev0>>12)&1==res){
         if(loopCount++ > 10000){
             printk(KERN_ALERT"DHT - Timeout");
             return -1;
         }
     }
-    return 0;
+    return loopCount;
 }
 
 int dht_get_humidity(void){
     u_int8_t bytes[5];
     int i;
+    int humidity;
     u64 before;
     u64 mid;
     u64 after;
@@ -111,9 +84,9 @@ int dht_get_humidity(void){
     }
 
     dht_output();
-    *gpclr0 |= (1<<gpio_pin);
+    *gpclr0 |= (1<<12);
     msleep(20);//at least 18ms
-    *gpset0 |= (1<<gpio_pin);
+    //*gpset0 |= (1<<gpio_pin);
     //actually need to wait for 20~40us but no microsecond sleep exist
     dht_input();
     if(getTimeout(0)<0) return -1;//lasts 80us
@@ -131,12 +104,15 @@ int dht_get_humidity(void){
         }
     }
     printk(KERN_INFO"DHT - bytes %X %X %X %X %X\n", bytes[0],bytes[1],bytes[2],bytes[3],bytes[4]);
-    if(bytes[0]+bytes[2] != bytes[4]){
+    if((bytes[0]+bytes[1]+bytes[2]+bytes[3]) & 0xFF != bytes[4]){
         printk(KERN_ALERT"DHT - Checksum Error");
         return -1;
     }
 
-    return (int)bytes[0];
+    humidity = (bytes[0]<<8)+bytes[1];
+    if(humidity > 1000) humidity = bytes[0];
+
+    return (int)();
 
 
 }
@@ -183,4 +159,4 @@ module_exit(dht_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("JeongMin Choi");
-MODULE_DESCRIPTION("Device Driver for DHT11 Temperature and Humidity Sensor");
+MODULE_DESCRIPTION("Device Driver for DHT11 Temperature and Humidity Sensor GPIO 12");
