@@ -22,6 +22,7 @@
 #define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
 #define BUTTON_MAJOR_NUMBER		504
+#define BUTTON_MINOR_NUMBER		100
 #define BUTTON_DEV_PATH_NAME	"/dev/button_dev"
 #define BUTTON_MAGIC_NUMBER		'j'
 
@@ -48,21 +49,11 @@
 #define LED_START	_IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
 #define LED_CONTROL	_IOW(LED_MAGIC_NUMBER, 1, int)
 
-#define BUTTON_MAJOR_NUMBER	504
-#define BUTTON_DEV_NAME		"button_dev"
-#define BUTTON_MAGIC_NUMBER	'j'
-#define BUTTON_MINOR_NUMBER	100
-
-#define BUTTON_START		_IOW(BUTTON_MAGIC_NUMBER, 0, unsigned int)
-#define BUTTON_GET_STATE	_IOR(BUTTON_MAGIC_NUMBER, 1 , int)
-
-#define CO2_GREAT	300
 #define CO2_GOOD	400
 #define CO2_BAD		500
 
-#define AIR_GREAT	400
-#define AIR_GOOD	500
-#define AIR_BAD		700
+#define AIR_GOOD	30
+#define AIR_BAD		70
 
 #define CLOSE		0
 #define OPEN		1
@@ -99,8 +90,8 @@ int main(void){
 	int switch_fd;
 
 	u_int8_t slaveAddr = 0x27;
-	unsigned int co2_gpio[3] = {17,27,22};
-	unsigned int dust_gpio[3] = {16,19,21};
+	unsigned int co2_gpio[3] = {17,27,6};
+	unsigned int dust_gpio[3] = {16,19,26};
 	unsigned int prio_gpio = 23;
 	unsigned int on_gpio = 24;
 	unsigned int button_gpio = 20;
@@ -170,10 +161,12 @@ int main(void){
 	ioctl(lcd_fd, LCD_START, &slaveAddr);
 
 	//test
+	/*
    	for(i = 0 ; i < strlen(test_input); i++){
         ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &test_input[i]);
     	usleep(100);
     }
+	*/
 	//test end
    	while(1){
 		temp = ioctl(uart_fd, IOCTL_CMD_RECEIVE, NULL);

@@ -13,8 +13,7 @@
 #define DHT_DEV_PATH_NAME	"dht_dev"
 #define DHT_MAGIC_NUMBER	'j'
 
-#define DHT_START			_IOW(DHT_MAGIC_NUMBER, 0, unsigned int)
-#define DHT_GET_HUMIDITY	_IOR(DHT_MAGIC_NUMBER, 1 , int)
+#define DHT_GET_HUMIDITY	_IOR(DHT_MAGIC_NUMBER, 0 , int)
 
 int main(void){
 	dev_t dht_dev;
@@ -34,8 +33,6 @@ int main(void){
 		printf("fail to open dht_dev\n");
 		return -1;
 	}
-
-	ioctl(dht_fd, DHT_START, &gpio_input);
 
 	while(count < 3){
 		usleep(1000);
