@@ -6,6 +6,7 @@
 #include <linux/slab.h>
 #include <linux/time.h>
 #include <linux/delay.h>
+#include <linux/sched.h>
 
 #include <asm/mach/map.h>
 #include <asm/io.h>
@@ -64,6 +65,7 @@ int getTimeout(int res){
     int loopCount = 0;
     while((*gplev0>>12)&1==res){
         if(loopCount++ > 10000){
+            set_default_priority();
             printk(KERN_ALERT"DHT - Timeout");
             return -1;
         }
@@ -71,19 +73,38 @@ int getTimeout(int res){
     return loopCount;
 }
 
+//got this code from internet from Adafruit
+
+void set_max_priority(void) {
+    struct sched_param sched;
+    memset(&sched, 0, sizeof(sched));
+    // Use FIFO scheduler with highest priority for the lowest chance of the kernel context switching.
+    sched.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    sched_setscheduler(0, SCHED_FIFO, &sched);
+}
+
+void set_default_priority(void) {
+    struct sched_param sched;
+    memset(&sched, 0, sizeof(sched));
+    // Go back to default scheduler with default 0 priority.
+    sched.sched_priority = 0;
+    sched_setscheduler(0, SCHED_OTHER, &sched);
+}
+
+//got this code from internet end from Adafruit
+
 int dht_get_humidity(void){
     u_int8_t bytes[5];
     int i;
-    int humidity;
-    u64 before;
-    u64 mid;
-    u64 after;
+    int before[40];
+    int after[40];
 
     for(i = 0; i<5; i++){
         bytes[i] = 0;
     }
 
     dht_output();
+    set_max_priority();
     *gpclr0 |= (1<<12);
     msleep(20);//at least 18ms
     //*gpset0 |= (1<<gpio_pin);
@@ -93,28 +114,23 @@ int dht_get_humidity(void){
     if(getTimeout(1)<0) return -1;//lasts 80us
 
     for(i=0; i < 40; i++){
-        before = ktime_get_real_ns();
-        if(getTimeout(0)<0) return -1;//initiate send 1 bit 50us 
-        mid = ktime_get_real_ns();
-        if(getTimeout(1)<0) return -1;//26-28us = 0, 70us = 1
-        after = ktime_get_real_ns();
-        printk(KERN_INFO"time : %lld %lld\n",after - mid, mid -before);
-        if(after - mid > mid - before){
+        if(before[i]=getTimeout(0)<0) return -1;//initiate send 1 bit 50us 
+        if(after[i]=getTimeout(1)<0) return -1;//26-28us = 0, 70us = 1
+    }
+    printk(KERN_INFO"time : %d %d\n",before, after);
+    for(i=0; i<40; i++){
+        if(after > before){
             bytes[i/8] |= (1<<(7-(i%8)));
         }
     }
     printk(KERN_INFO"DHT - bytes %X %X %X %X %X\n", bytes[0],bytes[1],bytes[2],bytes[3],bytes[4]);
     if((bytes[0]+bytes[1]+bytes[2]+bytes[3]) & 0xFF != bytes[4]){
+        set_default_priority();
         printk(KERN_ALERT"DHT - Checksum Error");
         return -1;
     }
-
-    humidity = (bytes[0]<<8)+bytes[1];
-    if(humidity > 1000) humidity = bytes[0];
-
-    return (int)();
-
-
+    set_default_priority();
+    return (int)(bytes[0]);
 }
 
 long dht_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
