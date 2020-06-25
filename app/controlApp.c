@@ -42,6 +42,7 @@
 #define IOCTL_CMD_ARRIVED	_IOR(IOCTL_MAGIC_NUMBER, 2, int)
 
 #define LED_MAJOR_NUMBER		505
+#define LED_MINOR_NUMBER		100
 #define LED_DEV_PATH_NAME		"/dev/led_dev"
 #define LED_MAGIC_NUMBER		'j'
 #define LED_MINOR_NUMBER		100
@@ -49,15 +50,23 @@
 #define LED_START	_IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
 #define LED_CONTROL	_IOW(LED_MAGIC_NUMBER, 1, int)
 
-#define CO2_GOOD	400
+#define DUST_LED_MAJOR_NUMBER	510
+#define DUST_LED_MINOR_NUMBER	100
+#define DUST_LED_DEV_PATH_NAME	"/dev/dust_led_dev"
+#define DUST_LED_MAGIC_NUMBER	'j'
+
+#define DUST_LED_START _IOW(DUST_LED_MAGIC_NUMBER, 0, unsigned int[3])
+#define DUST_LED_CONTROL _IOW(DUST_LED_MAGIC_NUMBER, 1, int)
+
+#define CO2_GOOD	430
 #define CO2_BAD		500
 
 #define AIR_GOOD	30
-#define AIR_BAD		70
+#define AIR_BAD		75
 
-#define CLOSE		0
-#define OPEN		1
-#define TOGGLE		2
+#define CLOSE		'0'
+#define OPEN		'1'
+#define TOGGLE		'2'
 
 int getCO2State(int co2_value){
 	if(CO2_BAD < co2_value) return 1;
@@ -86,18 +95,21 @@ int main(void){
 	dev_t led_dev;
 	int led_fd;
 
+	dev_t dust_led_dev;
+	int dust_led_fd;
+
 	dev_t switch_dev;
 	int switch_fd;
 
 	u_int8_t slaveAddr = 0x27;
-	unsigned int co2_gpio[3] = {17,27,6};
+	unsigned int co2_gpio[3] = {17,27,5};
 	unsigned int dust_gpio[3] = {16,19,26};
 	unsigned int prio_gpio = 23;
 	unsigned int on_gpio = 24;
 	unsigned int button_gpio = 20;
 
    	long temp;
-	char test_input[STRING_LENGTH]= "C12D34E";//for test delete later
+	char test_input[STRING_LENGTH]= "C12D34T";//for test delete later
 	int i = 0;
 	char result;
 	char prev_result;
@@ -148,6 +160,17 @@ int main(void){
 		return -1;
 	}
 
+	dust_led_dev = makedev(DUST_LED_MAJOR_NUMBER, DUST_LED_MINOR_NUMBER);
+	if (mknod(DUST_LED_DEV_PATH_NAME, S_IFCHR|0666, dust_led_dev)<0){
+		fprintf(stderr, "%d\n", errno);
+	}
+	
+	dust_led_fd = open(DUST_LED_DEV_PATH_NAME, O_RDWR);
+	if(dust_led_fd < 0){
+		printf("fail to open dust_led_dev\n");
+		return -1;
+	}
+
 	switch_dev = makedev(BUTTON_MAJOR_NUMBER, BUTTON_MINOR_NUMBER);
 	if (mknod(BUTTON_DEV_PATH_NAME, S_IFCHR|0666, switch_dev)<0){
 		fprintf(stderr, "%d\n", errno);
@@ -160,14 +183,16 @@ int main(void){
 	}
 
 	ioctl(lcd_fd, LCD_START, &slaveAddr);
+	ioctl(led_fd, LED_START, &co2_gpio);
+	ioctl(dust_led_fd, DUST_LED_START, &dust_gpio);
 
 	//test
-	/*
+	
    	for(i = 0 ; i < strlen(test_input); i++){
         ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &test_input[i]);
     	usleep(100);
     }
-	*/
+	
 	//test end
    	while(1){
 		temp = ioctl(uart_fd, IOCTL_CMD_RECEIVE, NULL);
@@ -188,24 +213,19 @@ int main(void){
 				lcd_str.len = strlen(lcd_str.input);
 				printf("%s\n",lcd_str.input);
 				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
-				usleep(1000000);
 				ioctl(lcd_fd, LCD_SET_LINE, 1);
-				usleep(1000000);
 				sprintf(lcd_str.input, "Dust: %s", dust_str);
 				lcd_str.len = strlen(lcd_str.input);
 				printf("%s\n",lcd_str.input);
 				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
-				usleep(1000000);
 
 				co2_value = atoi(co2_str);
 				dust_value = atoi(dust_str);
 				co2_state = getCO2State(co2_value);
 				dust_state = getDustState(dust_value);
 
-				ioctl(led_fd, LED_START, &co2_gpio);
+				ioctl(dust_led_fd, DUST_LED_CONTROL, &dust_state);
 				ioctl(led_fd, LED_CONTROL, &co2_state);
-				ioctl(led_fd, LED_START, &dust_gpio);
-				ioctl(led_fd, LED_CONTROL, &dust_state);
 				
 				ioctl(switch_fd, BUTTON_START, &on_gpio);
 				ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
@@ -222,14 +242,19 @@ int main(void){
 					else{
 						ioctl(switch_fd, BUTTON_START, &prio_gpio);
 						ioctl(switch_fd, BUTTON_GET_STATE, &prio);
-						if(prio ==1) result = OPEN;
+						if(prio ==1){
+							if(rain_state){
+								if(co2_state ==2) result = OPEN;
+								else result = CLOSE;
+							}
+						}
 						else result = CLOSE;
 					}
 					if(prev_result != result){
 						ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 						prev_result = result;
 					}
-					//printf("result = %d", result);
+					printf("result = %c", result);
 				}
 				//break;//for test need to delete this
 			}else{
@@ -250,7 +275,7 @@ int main(void){
 			ioctl(switch_fd, BUTTON_GET_STATE, &button_state);
 			if(prev_button_state==0 && button_state==1){
 				result = TOGGLE;
-				//printf("Toggle\n");
+				printf("Toggle\n");
 				ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
 			}
 			prev_button_state = button_state;
@@ -260,6 +285,7 @@ int main(void){
    close(uart_fd);
    close(lcd_fd);
    close(led_fd);
+   close(dust_led_fd);
    close(switch_fd);
    return 0;
 }
