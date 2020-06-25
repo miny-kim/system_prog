@@ -110,6 +110,7 @@ int main(void){
 	volatile int dust_value;
 	volatile int co2_state;
 	volatile int dust_state;
+	volatile int rain_state;
 	volatile int on_state;
 	volatile int prio;
 	volatile int button_state;
@@ -178,8 +179,9 @@ int main(void){
 				co2_str[i] = '\0';
 				i = 0;
 				state = 1; 
-			}else if(temp == 'E'){ //end of message
+			}else if(temp == 'T' || temp == 'F'){ //end of message
 				dust_str[i] = '\0';
+				rain_state = temp == 'T';
 				state = -1;
 				ioctl(lcd_fd, LCD_CLEAR);
 				sprintf(lcd_str.input, "CO2: %s", co2_str);
@@ -209,7 +211,13 @@ int main(void){
 				ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
 
 				if(on_state==1){
-					if(co2_state > dust_state) result = OPEN;
+					if(co2_state > dust_state){
+						if(rain_state){
+							if(co2_state ==2) result = OPEN;
+							else result = CLOSE;
+						}
+						else result = OPEN;
+					}
 					else if(co2_state < dust_state) result = CLOSE;
 					else{
 						ioctl(switch_fd, BUTTON_START, &prio_gpio);
