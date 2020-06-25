@@ -4,6 +4,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 
 #include <asm/mach/map.h>
 #include <asm/io.h>
@@ -48,9 +49,9 @@ int led_open(struct inode *inode, struct file *filp){
 
 int led_release(struct inode *inode, struct file *filp){
 	int i;
-	for(i=0; i<3; i++){
+		for(i=0; i<3; i++){
 		*gpclr0 |=  (1<<gpio_color[i]);
-	}
+		}
 	printk(KERN_ALERT "LED driver closed!!\n");
 	iounmap((void*)gpio_base);
 	return 0;
@@ -62,51 +63,51 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
     switch(cmd){
 		case LED_START: 
 			copy_from_user(&gpio_color, (const void*)arg, sizeof(gpio_color));
-			for(i=0; i<3; i++){
+				for(i=0; i<3; i++){
 				switch(gpio_color[i]/10){ //set gpio_color to output
-				case 0:
+					case 0:
 					*gpsel0 |= (1<<(((gpio_color[i])%10)*3));
-					break;
-				case 1:
+						break;
+					case 1:
 					*gpsel1 |= (1<<(((gpio_color[i])%10)*3));
-					break;
-				case 2:
+						break;
+					case 2:
 					*gpsel2 |= (1<<(((gpio_color[i])%10)*3));
-					break;
-				default:
-					printk(KERN_ALERT"LED - Invalid GPIO Port Number\n");
+						break;
+					default:
+						printk(KERN_ALERT"LED - Invalid GPIO Port Number\n");
+					}
 				}
-			}
 			break;
 		case LED_CONTROL:
 			copy_from_user(&kbuf, (const void*)arg, 4);
 			printk(KERN_INFO"LED - Received %d", kbuf);
 			if(0<=kbuf && kbuf <=3){
-				for(i=0; i<3; i++){
+					for(i=0; i<3; i++){
 					if(kbuf-1==i) *gpset0 |= (1<<gpio_color[i]);
 					else *gpclr0 |=  (1<<gpio_color[i]);
-				}
+					}
 				switch(kbuf){
-					case 0:
-						printk(KERN_INFO "LED - Black\n");
-						break;
-					case 1:
-						printk(KERN_INFO "LED - Red\n");
-						break;
-					case 2:
-						printk(KERN_INFO "LED - Green\n");
-						break;
-					case 3:
-						printk(KERN_INFO "LED - Blue\n");
-						break;
+						case 0:
+							printk(KERN_INFO "LED - Black\n");
+							break;
+						case 1:
+							printk(KERN_INFO "LED - Red\n");
+							break;
+						case 2:
+							printk(KERN_INFO "LED - Green\n");
+							break;
+						case 3:
+							printk(KERN_INFO "LED - Blue\n");
+							break;
+					}
+					break;
 				}
-				break;
-            }
-            else{
-                //error
-                printk(KERN_ALERT "ERROR state parameter error\n");
-                return -1;
-            }
+				else{
+					//error
+					printk(KERN_ALERT "ERROR state parameter error\n");
+					return -1;
+				}
             break;
 		default:
 			printk(KERN_ALERT "Unknown command!\n");
