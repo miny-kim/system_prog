@@ -224,6 +224,7 @@ int main(void){
 				co2_state = getCO2State(co2_value);
 				dust_state = getDustState(dust_value);
 
+				ioctl(led_fd, LED_CONTROL, &co2_state);
 				ioctl(dust_led_fd, DUST_LED_CONTROL, &dust_state);
 				ioctl(led_fd, LED_CONTROL, &co2_state);
 				
@@ -231,28 +232,28 @@ int main(void){
 				ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
 
 				if(on_state==1){
-					if(co2_state > dust_state){
+					if(co2_state < dust_state){
 						if(rain_state){
-							if(co2_state ==2) result = OPEN;
+							if(co2_state ==1) result = OPEN;
 							else result = CLOSE;
 						}
 						else result = OPEN;
 					}
-					else if(co2_state < dust_state) result = CLOSE;
+					else if(co2_state > dust_state) result = CLOSE;
 					else{
 						ioctl(switch_fd, BUTTON_START, &prio_gpio);
 						ioctl(switch_fd, BUTTON_GET_STATE, &prio);
 						if(prio ==1){
 							if(rain_state){
-								if(co2_state ==2) result = OPEN;
+								if(co2_state ==1) result = OPEN;
 								else result = CLOSE;
 							}
+							else result = OPEN;
 						}
 						else result = CLOSE;
 					}
 					ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
-					prev_result = result;
-					printf("result = %c", result);
+					printf("result = %c\n", result);
 				}
 				//break;//for test need to delete this
 			}else{
