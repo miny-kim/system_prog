@@ -102,8 +102,8 @@ int main(void){
 	int switch_fd;
 
 	u_int8_t slaveAddr = 0x27;
-	unsigned int co2_gpio[3] = {17,27,5};
-	unsigned int dust_gpio[3] = {16,19,26};
+	unsigned int co2_gpio[3] = {17,27,13};
+	unsigned int dust_gpio[3] = {16,19,18};
 	unsigned int prio_gpio = 23;
 	unsigned int on_gpio = 24;
 	unsigned int button_gpio = 20;
@@ -188,10 +188,10 @@ int main(void){
 
 	//test
 	
-   	for(i = 0 ; i < strlen(test_input); i++){
+   	/*for(i = 0 ; i < strlen(test_input); i++){
         ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &test_input[i]);
     	usleep(100);
-    }
+    }*/
 	
 	//test end
    	while(1){
@@ -224,8 +224,9 @@ int main(void){
 				co2_state = getCO2State(co2_value);
 				dust_state = getDustState(dust_value);
 
-				ioctl(dust_led_fd, DUST_LED_CONTROL, &dust_state);
 				ioctl(led_fd, LED_CONTROL, &co2_state);
+				ioctl(dust_led_fd, DUST_LED_CONTROL, &dust_state);
+				
 				
 				ioctl(switch_fd, BUTTON_START, &on_gpio);
 				ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
@@ -250,10 +251,8 @@ int main(void){
 						}
 						else result = CLOSE;
 					}
-					if(prev_result != result){
-						ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
-						prev_result = result;
-					}
+					ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
+					prev_result = result;
 					printf("result = %c", result);
 				}
 				//break;//for test need to delete this
