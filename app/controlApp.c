@@ -68,13 +68,13 @@
 #define OPEN		'1'
 #define TOGGLE		'2'
 
-int getCO2State(int co2_value){
+int getCO2State(float co2_value){
 	if(CO2_BAD < co2_value) return 1;
 	if(CO2_GOOD < co2_value) return 2;
 	return 3; 
 }
 
-int getDustState(int dust_value){
+int getDustState(float dust_value){
 	if(AIR_BAD < dust_value) return 1;
 	if(AIR_GOOD < dust_value) return 2;
 	return 3; 
@@ -118,8 +118,8 @@ int main(void){
 
 	char co2_str[LCD_LENGTH];
 	char dust_str[LCD_LENGTH];
-	volatile int co2_value;
-	volatile int dust_value;
+	volatile float co2_value;
+	volatile float dust_value;
 	volatile int co2_state;
 	volatile int dust_state;
 	volatile int rain_state;
@@ -219,8 +219,8 @@ int main(void){
 				printf("%s\n",lcd_str.input);
 				ioctl(lcd_fd, LCD_WRITE, &lcd_str);
 
-				co2_value = atoi(co2_str);
-				dust_value = atoi(dust_str);
+				co2_value = atof(co2_str);
+				dust_value = atof(dust_str);
 				co2_state = getCO2State(co2_value);
 				dust_state = getDustState(dust_value);
 
