@@ -19,8 +19,10 @@
 #define LCD_SET_LINE	_IOW(LCD_MAGIC_NUMBER, 2, int)
 #define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
+#define LCD_LENGTH		16
+
 struct write_data{
-	char* input;
+	char input[LCD_LENGTH];
 	int len;
 };
 
@@ -45,7 +47,7 @@ int main(void){
 
 	struct write_data test;
 	u_int8_t slaveAddr = 0x27;
-	test.input = "Hello World!";
+	scanf("%s", test.input);
 	test.len = strlen(test.input);
 	ioctl(lcd_fd, LCD_START, &slaveAddr);
 	printf("set slave address\n");
