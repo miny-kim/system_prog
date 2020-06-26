@@ -224,9 +224,8 @@ int main(void){
 				co2_state = getCO2State(co2_value);
 				dust_state = getDustState(dust_value);
 
-				ioctl(led_fd, LED_CONTROL, &co2_state);
 				ioctl(dust_led_fd, DUST_LED_CONTROL, &dust_state);
-				
+				ioctl(led_fd, LED_CONTROL, &co2_state);
 				
 				ioctl(switch_fd, BUTTON_START, &on_gpio);
 				ioctl(switch_fd, BUTTON_GET_STATE, &on_state);
