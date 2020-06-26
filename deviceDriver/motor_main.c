@@ -77,8 +77,8 @@ int main(void)
 	dev_t uart_dev = 0;
    	int uart_fd = 0;
   
-	volatile int door_state = 0;
-	volatile int new_door_state = 0;
+	volatile int door_state = DOOR_CLOSED;
+	volatile int new_door_state = DOOR_CLOSED;
   
 	stepmotor_dev = makedev(STEP_MAJOR_NUMBER, STEP_MINOR_NUMBER);	
 	n20motor_dev = makedev(N20_MAJOR_NUMBER, N20_MINOR_NUMBER);
@@ -144,6 +144,7 @@ int main(void)
 		{
 			case INPUT_CMD_CLOSE:
 				cmd = CMD_CLOSE;
+				
 				break;
 			case INPUT_CMD_OPEN:
 				cmd = CMD_OPEN;
@@ -186,6 +187,18 @@ int main(void)
 				ioctl(n20_fd, N20_SPIN);
 				break;
 			case CMD_CLOSE:
+				if (door_state == DOOR_CLOSED)
+				{
+					step_cmd = STEP_STOP;
+				
+					ioctl(step_fd, step_cmd);
+					ioctl(n20_fd, N20_STOP);
+				
+					step_timer = 0;
+					
+					break;
+				}
+			
 				step_cmd = STEP_REWIND;
 				
 				ioctl(n20_fd, N20_STOP);
