@@ -80,6 +80,7 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 			break;
 		case LED_CONTROL:
 			copy_from_user(&kbuf, (const void*)arg, 4);
+			printk(KERN_INFO"LED - Received %d", kbuf);
 			if(0<=kbuf && kbuf <=3){
 				for(i=0; i<3; i++){
 					if(kbuf-1==i) *gpset0 |= (1<<gpio_color[i]);
@@ -96,9 +97,10 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 						printk(KERN_INFO "LED - Green\n");
 						break;
 					case 3:
-						printk(KERN_INFO "LED - Green\n");
+						printk(KERN_INFO "LED - Blue\n");
 						break;
 				}
+				break;
             }
             else{
                 //error
