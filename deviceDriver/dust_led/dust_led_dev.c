@@ -10,9 +10,9 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
-#define LED_MAJOR_NUMBER 505
-#define LED_DEV_NAME "led_dev"
-#define LED_MAGIC_NUMBER 'j'
+#define DUST_LED_MAJOR_NUMBER 510
+#define DUST_LED_DEV_NAME "dust_led_dev"
+#define DUST_LED_MAGIC_NUMBER 'j'
 
 #define GPIO_BASE_ADDR	0x3F200000
 #define GPFSEL0			0x00
@@ -21,8 +21,8 @@
 #define GPSET0			0x1C
 #define GPCLR0			0x28
 
-#define LED_START _IOW(LED_MAGIC_NUMBER, 0, unsigned int[3])
-#define LED_CONTROL _IOW(LED_MAGIC_NUMBER, 1, int)
+#define DUST_LED_START _IOW(DUST_LED_MAGIC_NUMBER, 0, unsigned int[3])
+#define DUST_LED_CONTROL _IOW(DUST_LED_MAGIC_NUMBER, 1, int)
 
 static void __iomem *gpio_base;
 volatile unsigned int *gpsel0;
@@ -31,11 +31,11 @@ volatile unsigned int *gpsel2;
 volatile unsigned int *gpset0;
 volatile unsigned int *gpclr0;
 
-unsigned int gpio_color[3] =  {17,27,13};
+unsigned int gpio_color[3] = {16,19,18};
 
 
-int led_open(struct inode *inode, struct file *filp){
-	printk(KERN_ALERT "LED driver open!!\n");
+int dust_led_open(struct inode *inode, struct file *filp){
+	printk(KERN_ALERT "DUST_LED driver open!!\n");
 	
 	gpio_base = ioremap(GPIO_BASE_ADDR, 0x60);
 	gpsel0 = (volatile unsigned int *)(gpio_base + GPFSEL0);
@@ -47,21 +47,21 @@ int led_open(struct inode *inode, struct file *filp){
 	return 0;
 }
 
-int led_release(struct inode *inode, struct file *filp){
+int dust_led_release(struct inode *inode, struct file *filp){
 	int i;
 		for(i=0; i<3; i++){
 		*gpclr0 |=  (1<<gpio_color[i]);
 		}
-	printk(KERN_ALERT "LED driver closed!!\n");
+	printk(KERN_ALERT "DUST_LED driver closed!!\n");
 	iounmap((void*)gpio_base);
 	return 0;
 }
 
-long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
+long dust_led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	int kbuf = -1;
 	int i;
     switch(cmd){
-		case LED_START: 
+		case DUST_LED_START: 
 			copy_from_user(&gpio_color, (const void*)arg, sizeof(gpio_color));
 				for(i=0; i<3; i++){
 				switch(gpio_color[i]/10){ //set gpio_color to output
@@ -75,30 +75,30 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 					*gpsel2 |= (1<<(((gpio_color[i])%10)*3));
 						break;
 					default:
-						printk(KERN_ALERT"LED - Invalid GPIO Port Number\n");
+						printk(KERN_ALERT"DUST_LED - Invalid GPIO Port Number\n");
 					}
 				}
 			break;
-		case LED_CONTROL:
+		case DUST_LED_CONTROL:
 			copy_from_user(&kbuf, (const void*)arg, 4);
-			printk(KERN_INFO"LED - Received %d", kbuf);
+			printk(KERN_INFO"DUST_LED - Received %d", kbuf);
 			if(0<=kbuf && kbuf <=3){
-					for(i=0; i<3; i++){
+				for(i=0; i<3; i++){
 					if(kbuf-1==i) *gpset0 |= (1<<gpio_color[i]);
 					else *gpclr0 |=  (1<<gpio_color[i]);
-					}
+				}
 				switch(kbuf){
 						case 0:
-							printk(KERN_INFO "LED - Black\n");
+							printk(KERN_INFO "DUST_LED - Black\n");
 							break;
 						case 1:
-							printk(KERN_INFO "LED - Red\n");
+							printk(KERN_INFO "DUST_LED - Red\n");
 							break;
 						case 2:
-							printk(KERN_INFO "LED - Green\n");
+							printk(KERN_INFO "DUST_LED - Green\n");
 							break;
 						case 3:
-							printk(KERN_INFO "LED - Blue\n");
+							printk(KERN_INFO "DUST_LED - Blue\n");
 							break;
 					}
 					break;
@@ -116,29 +116,29 @@ long led_ioctl(struct file *filp, unsigned int cmd, unsigned long arg){
 	return 0;
 }
 
-static struct file_operations led_fops = {
+static struct file_operations dust_led_fops = {
 	.owner = THIS_MODULE,
-	.unlocked_ioctl = led_ioctl,
-	.open = led_open,
-	.release = led_release
+	.unlocked_ioctl = dust_led_ioctl,
+	.open = dust_led_open,
+	.release = dust_led_release
 };
 
-int __init led_init(void){
-	if(register_chrdev(LED_MAJOR_NUMBER, LED_DEV_NAME, &led_fops)<0)
-		printk(KERN_ALERT "LED driver initialization fail\n");
+int __init dust_led_init(void){
+	if(register_chrdev(DUST_LED_MAJOR_NUMBER, DUST_LED_DEV_NAME, &dust_led_fops)<0)
+		printk(KERN_ALERT "DUST_LED driver initialization fail\n");
 	else
-		printk(KERN_ALERT "LED driver initialization success\n");
+		printk(KERN_ALERT "DUST_LED driver initialization success\n");
 	return 0;
 }
 
-void __exit led_exit(void){
-	unregister_chrdev(LED_MAJOR_NUMBER, LED_DEV_NAME);
-	printk(KERN_ALERT "LED driver exit done\n");
+void __exit dust_led_exit(void){
+	unregister_chrdev(DUST_LED_MAJOR_NUMBER, DUST_LED_DEV_NAME);
+	printk(KERN_ALERT "DUST_LED driver exit done\n");
 }
 
-module_init(led_init);
-module_exit(led_exit);
+module_init(dust_led_init);
+module_exit(dust_led_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Minyeong");
-MODULE_DESCRIPTION("Device Driver for RGB LED");
+MODULE_DESCRIPTION("Device Driver for RGB DUST LED");

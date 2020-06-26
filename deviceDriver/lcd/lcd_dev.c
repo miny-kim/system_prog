@@ -78,7 +78,7 @@ int i2c_write(u_int8_t* buf, int len){
 	*bsc1 |= 0x30; //clear fifo
     *bsc1 &= ~(0x1); //set to write packet transfer
 
-    *bss1 &= ~(0x302); // clear status
+    *bss1 |= 0x302; // clear status
 
     *bsdlen1 = (*bsdlen1 & (~0xFFFF)) | (len & 0xFFFF); //set length
 
@@ -124,7 +124,7 @@ bool i2c_read(u_int8_t* buf, int len){
     *bsc1 |= 0x30; //clear fifo
     *bsc1 |= 0x1; //set to read packet transfer
 
-    *bss1 &= ~(0x302); // clear status
+    *bss1 |= 0x302; // clear status
 
     *bsdlen1 = (*bsdlen1 & (~0xFFFF)) | (len & 0xFFFF); //set length
 
@@ -237,6 +237,7 @@ struct write_data{
 #define LCD_CLEAR		_IO(LCD_MAGIC_NUMBER, 3)
 
 u_int8_t* slaveAddr = NULL;
+int lcd_clear(void);
 
 int lcd_open(struct inode *inode, struct file *filp){
 	printk(KERN_ALERT "LCD DD -  Open\n");
@@ -246,6 +247,7 @@ int lcd_open(struct inode *inode, struct file *filp){
 
 int lcd_release(struct inode *inode, struct file *filp){
 	printk(KERN_ALERT "LCD DD -  Release\n");
+	lcd_clear();
 	i2c_release();
 	return 0;
 }
