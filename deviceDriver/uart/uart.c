@@ -53,106 +53,105 @@ volatile unsigned int *gpfsel1;
 
 void Setup_MINIUART(void)
 {
-   muart_base = ioremap(BASE_ADDR + mUART_BASE_ADDR, 0x60);
-   gpio_base = ioremap(BASE_ADDR + GPIO_BASE_ADDR, 0x60);
-
-   en = (volatile unsigned int *)(muart_base + EN);
-   muio = (volatile unsigned int *)(muart_base + MUIO);
-   muier = (volatile unsigned int *)(muart_base + MUIER);
-   muiir = (volatile unsigned int *)(muart_base + MUIIR);
-   mulcr = (volatile unsigned int *)(muart_base + MULCR);
-   mumcr = (volatile unsigned int *)(muart_base + MUMCR);
-   mulsr = (volatile unsigned int *)(muart_base + MULSR);
-   mucntl = (volatile unsigned int *)(muart_base + MUCNTL);
-   mubaud = (volatile unsigned int *)(muart_base + MUBAUD);
-   
-   gpfsel1 = (volatile unsigned int *)(muart_base + GPFSEL1);
-   
-   *en |= 1;
-   *mucntl = 0;
-   *mulcr = 3;
-   *mumcr = 0;
-   *muier = 0;
-   *muiir = 0xC1;
-   *mubaud = 270;
-   
-   *gpfsel1 |= (2 << 12); //change function 
-   *gpfsel1 |= (2 << 15);
-   *mucntl = 3;
-   
-   printk(KERN_INFO "CLEAR? %d",(*mulsr&(1<<6)));
-
+    muart_base = ioremap(BASE_ADDR + mUART_BASE_ADDR, 0x60);
+    gpio_base = ioremap(BASE_ADDR + GPIO_BASE_ADDR, 0x60);
+    
+    en = (volatile unsigned int *)(muart_base + EN);
+    muio = (volatile unsigned int *)(muart_base + MUIO);
+    muier = (volatile unsigned int *)(muart_base + MUIER);
+    muiir = (volatile unsigned int *)(muart_base + MUIIR);
+    mulcr = (volatile unsigned int *)(muart_base + MULCR);
+    mumcr = (volatile unsigned int *)(muart_base + MUMCR);
+    mulsr = (volatile unsigned int *)(muart_base + MULSR);
+    mucntl = (volatile unsigned int *)(muart_base + MUCNTL);
+    mubaud = (volatile unsigned int *)(muart_base + MUBAUD);
+    
+    gpfsel1 = (volatile unsigned int *)(muart_base + GPFSEL1);
+    
+    *en |= 1;
+    *mucntl = 0;
+    *mulcr = 3;
+    *mumcr = 0;
+    *muier = 0;
+    *muiir = 0xC1;
+    *mubaud = 270;
+    
+    *gpfsel1 |= (2 << 12); //change function
+    *gpfsel1 |= (2 << 15);
+    *mucntl = 3;
+    
+    printk(KERN_INFO "CLEAR? %d",(*mulsr&(1<<6)));
+    
 }
 
 void Send_MINIUART(unsigned int data){
-   while (!(*mulsr & (1 << 5)));
-   printk(KERN_ALERT "data send %c\n", data);
-   *muio = data;
-   //printk(KERN_ALERT "UART buffer send %d\n", (*muio));
+    while (!(*mulsr & (1 << 5)));
+    printk(KERN_ALERT "data send %c\n", data);
+    *muio = data;
 }
 
 int Receive_MINIUART(void)
 {
-   int temp;
-   if(!(*mulsr & 1))
-   {
-      return -1;
-   }
-   temp = (*muio);
-   printk(KERN_ALERT "UART buffer receive %c\n", temp);
-   return temp;
+    int temp;
+    if(!(*mulsr & 1))
+    {
+        return -1;
+    }
+    temp = (*muio);
+    printk(KERN_ALERT "UART buffer receive %c\n", temp);
+    return temp;
 }
 
 long uart_ioctl(struct file *flip, unsigned int cmd, unsigned long arg)
 {
-   int kbuf = -1;
-   
-   switch(cmd) {         
-      case IOCTL_CMD_TRANSMIT:
-         copy_from_user(&kbuf, (const void*)arg, sizeof(char));
-         Send_MINIUART(kbuf);
-         break;
-         
-      case IOCTL_CMD_RECEIVE:
-         kbuf = Receive_MINIUART();
-         return kbuf;
-         break;
-      }
-  
-   return 0;
+    int kbuf = -1;
+    
+    switch(cmd) {
+        case IOCTL_CMD_TRANSMIT:
+            copy_from_user(&kbuf, (const void*)arg, sizeof(char));
+            Send_MINIUART(kbuf);
+            break;
+            
+        case IOCTL_CMD_RECEIVE:
+            kbuf = Receive_MINIUART();
+            return kbuf;
+            break;
+    }
+    
+    return 0;
 }
 
 int uart_open(struct inode *inode, struct file *flip){
-   printk(KERN_ALERT "UART driver open!!\n");
-   Setup_MINIUART();
-   return 0;
+    printk(KERN_ALERT "UART driver open!!\n");
+    Setup_MINIUART();
+    return 0;
 }
 
 int uart_release(struct inode *inode, struct file *flip){
-   printk(KERN_ALERT "UART driver closed!!\n");
-   return 0;
+    printk(KERN_ALERT "UART driver closed!!\n");
+    return 0;
 }
 
 static struct file_operations uart_fops = {
-   .owner = THIS_MODULE,
-   .open = uart_open,
-   .release = uart_release,
-   .unlocked_ioctl = uart_ioctl
+    .owner = THIS_MODULE,
+    .open = uart_open,
+    .release = uart_release,
+    .unlocked_ioctl = uart_ioctl
 };
 
 int __init uart_init(void){
-   if(register_chrdev(UART_MAJOR_NUMBER, UART_DEV_NAME, &uart_fops) <0)
-      printk(KERN_ALERT "UART driver init fail\n");
-   else
-   {
-      printk(KERN_ALERT "UART driver init success\n");
-   }
-   return 0;
+    if(register_chrdev(UART_MAJOR_NUMBER, UART_DEV_NAME, &uart_fops) <0)
+        printk(KERN_ALERT "UART driver init fail\n");
+    else
+    {
+        printk(KERN_ALERT "UART driver init success\n");
+    }
+    return 0;
 }
 
 void __exit uart_exit(void){
-   unregister_chrdev(UART_MAJOR_NUMBER, UART_DEV_NAME);
-   printk(KERN_ALERT "UART driver exit done\n");
+    unregister_chrdev(UART_MAJOR_NUMBER, UART_DEV_NAME);
+    printk(KERN_ALERT "UART driver exit done\n");
 }
 
 module_init(uart_init);

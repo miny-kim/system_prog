@@ -35,7 +35,7 @@
 int _kbhit() {
     static const int STDIN = 0;
     static int initialized = 0;
-
+    
     if (! initialized) {
         // Use termios to turn off line buffering
         struct termios term;
@@ -45,7 +45,7 @@ int _kbhit() {
         setbuf(stdin, NULL);
         initialized = 1;
     }
-
+    
     int bytesWaiting;
     ioctl(STDIN, FIONREAD, &bytesWaiting);
     return bytesWaiting;
@@ -53,58 +53,58 @@ int _kbhit() {
 
 int main()
 {
-   dev_t uart_dev;
-   int fd;
-   int i = 0;
-   int string_index = 0;
-   int b_async_input = 0;
-   char char_temp;
-   char string[STRING_LENGTH];
-   long result;
-   
-   uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
-   mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev);
-   
-   fd = open(UART_DEV_PATH_NAME, O_RDWR | O_NOCTTY | O_NDELAY); //Open in non blocking read/write mode
-   
-   if(fd <0)
-   {
-      printf("fail to open\n");
-      return -1;
-   }
-   
-   while(1)
-   {
-      b_async_input = _kbhit();
-      if(b_async_input > 0)
-      {
-         char_temp = getchar();
-         if(char_temp == KBHIT_ENTER)
-         {
-            for(i = 0 ; i < string_index; i++)
+    dev_t uart_dev;
+    int fd;
+    int i = 0;
+    int string_index = 0;
+    int b_async_input = 0;
+    char char_temp;
+    char string[STRING_LENGTH];
+    long result;
+    
+    uart_dev = makedev(UART_MAJOR_NUMBER, UART_MINOR_NUMBER);
+    mknod(UART_DEV_PATH_NAME, S_IFCHR|0666, uart_dev);
+    
+    fd = open(UART_DEV_PATH_NAME, O_RDWR | O_NOCTTY | O_NDELAY); //Open in non blocking read/write mode
+    
+    if(fd <0)
+    {
+        printf("fail to open\n");
+        return -1;
+    }
+    
+    while(1)
+    {
+        b_async_input = _kbhit();
+        if(b_async_input > 0)
+        {
+            char_temp = getchar();
+            if(char_temp == KBHIT_ENTER)
             {
-               ioctl(fd, IOCTL_CMD_TRANSMIT, &string[i]);
-               usleep(100);
+                for(i = 0 ; i < string_index; i++)
+                {
+                    ioctl(fd, IOCTL_CMD_TRANSMIT, &string[i]);
+                    usleep(100);
+                }
+                string_index = 0;
             }
-            string_index = 0;
-         }
-         else
-         {
-            string[string_index++] = char_temp;
-         }
-      }
-      
-      result = ioctl(fd, IOCTL_CMD_RECEIVE, NULL);
-      if(result >= 0 )
-      {
-         printf(ANSI_COLOR_GREEN);
-         printf("%c", result); 
-         printf(ANSI_COLOR_RESET);
-         fflush(stdout);
-      }
-
-   }
-   
-   close(fd);
-   return 0;
+            else
+            {
+                string[string_index++] = char_temp;
+            }
+        }
+        
+        result = ioctl(fd, IOCTL_CMD_RECEIVE, NULL);
+        if(result >= 0 )
+        {
+            printf(ANSI_COLOR_GREEN);
+            printf("%c", result);
+            printf(ANSI_COLOR_RESET);
+            fflush(stdout);
+        }
+        
+    }
+    
+    close(fd);
+    return 0;
 }
