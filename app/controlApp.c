@@ -242,13 +242,14 @@ int main(void){
 					else{
 						ioctl(switch_fd, BUTTON_START, &prio_gpio);
 						ioctl(switch_fd, BUTTON_GET_STATE, &prio);
-						if(prio ==1){
+						if(prio ==1){//CO2
 							if(rain_state){
 								if(co2_state ==2) result = OPEN;
 								else result = CLOSE;
 							}
+							else result = OPEN;
 						}
-						else result = CLOSE;
+						else result = CLOSE; //Dust
 					}
 					if(prev_result != result){
 						ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &result);
