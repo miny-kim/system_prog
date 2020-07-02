@@ -187,12 +187,12 @@ int main(void){
 	ioctl(dust_led_fd, DUST_LED_START, &dust_gpio);
 
 	//test
-	
+	/*
    	for(i = 0 ; i < strlen(test_input); i++){
         ioctl(uart_fd, IOCTL_CMD_TRANSMIT, &test_input[i]);
     	usleep(100);
     }
-	
+	*/
 	//test end
    	while(1){
 		temp = ioctl(uart_fd, IOCTL_CMD_RECEIVE, NULL);
